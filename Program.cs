@@ -4,6 +4,8 @@ using System.Net;
 Console.WriteLine("Write commands");
 
 
+var msg = new CustomProtocolMessage();
+msg.SetFlags(ack:true, ping:true);
 
 
 
