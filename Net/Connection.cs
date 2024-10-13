@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 public class Connection
 {
@@ -9,6 +10,7 @@ public class Connection
         {
                 
             var socket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
+            
             //Dns.GetHostAddresses(Dns.GetHostName())[0]
             Console.WriteLine($"Listening on address {address} on port {port}");
             
@@ -22,5 +24,18 @@ public class Connection
                 }
         });
         task.Start();
+    }
+    /// <summary>
+    /// Get maxumum payload size in bytes available for this network
+    /// </summary>
+    public static int GetMaximumUdpPayloadSize()
+    {
+        //in progress
+        /*NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
+        foreach(NetworkInterface adapter in interfaces)
+        {
+
+        }*/
+        return 1500-60-4;
     }
 }
