@@ -1,10 +1,17 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-public class Connection
+public class UdpServer
 {
-    protected static bool isListening = false;
-    public static void StartListening(ushort port, string address = "127.0.0.1")
+    protected ushort port;
+    protected string address;
+    public UdpServer(ushort port, string address = "127.0.0.1")
+    {
+        this.port = port;
+        this.address = address;
+    }
+
+    public void StartListening()
     {
         Task task = new Task(async()=>
         {
@@ -25,6 +32,12 @@ public class Connection
         });
         task.Start();
     }
+
+    public void Connect(ushort port, string address = "127.0.0.1")
+    {
+
+    }
+
     /// <summary>
     /// Get maxumum payload size in bytes available for this network
     /// </summary>
@@ -38,4 +51,7 @@ public class Connection
         }*/
         return 1500-60-4;
     }
+
+
+    
 }

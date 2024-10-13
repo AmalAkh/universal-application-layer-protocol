@@ -12,7 +12,10 @@ Console.WriteLine("Write commands");
 
 Console.Write("Enter port for listening:");
 ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
-Connection.StartListening(listeningPort);
+UdpServer udpServer = new UdpServer(listeningPort);
+udpServer.StartListening();
+
+
 
 while(true)
 {
