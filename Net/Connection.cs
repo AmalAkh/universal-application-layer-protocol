@@ -9,12 +9,14 @@ namespace CustomProtocol.Net
     {
         protected ushort listeningPort;
         protected string listeningAddress;
+
+        protected bool IsConnectionEstablished = false;
         public UdpServer(ushort port, string address = "127.0.0.1")
         {
             this.listeningPort = port;
             this.listeningAddress = address;
         }
-
+        
         public void StartListening()
         {
             Task task = new Task(async()=>
@@ -31,6 +33,7 @@ namespace CustomProtocol.Net
                     {
                         byte[] bytes = new byte[1500];
                         int bytesCount = await socket.ReceiveAsync(bytes);
+                        
                         Console.WriteLine($"Received - {bytesCount}");
                     }
             });

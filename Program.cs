@@ -13,12 +13,12 @@ message.SetFlag(CustomProtocolFlag.Ack, true);
 message.Data = Encoding.ASCII.GetBytes("Test message");
 byte[] bytes = message.ToByteArray();
 
-var text = Encoding.ASCII.GetString(message.Data);
+
 
 
 var newMsg = CustomProtocolMessage.FromBytes(bytes);
 
-
+var text = Encoding.ASCII.GetString(newMsg.Data);
 
 
 

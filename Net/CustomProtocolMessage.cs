@@ -15,6 +15,8 @@ namespace CustomProtocol.Net
         public UInt16 Id;
         public bool[] Flags;
 
+        protected static CRC16 CRC16Implementation = new CRC16();
+
         
         public UInt16 HeaderCheckSum;
 
@@ -91,9 +93,18 @@ namespace CustomProtocol.Net
             message.HeaderCheckSum = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 7,2));
 
 
+            if(CRC16Implementation.Compute([..bytes.Take(new Range(0,7)), bytes[8], bytes[7]]) != 0)
+            {
+                throw new Exception("Checksum");
+            }
 
+            
 
-            message.Data = bytes.Take(new Range(0, bytes.Length -2)).ToArray<byte>();
+            message.Data = bytes.Take(new Range(9, bytes.Length -2)).ToArray<byte>();
+            if(CRC16Implementation.Compute([..message.Data, bytes[bytes.Length-1], bytes[bytes.Length-2]]) != 0)
+            {
+                throw new Exception("Checksum");
+            }
             message.DataCheckSum =  BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, bytes.Length-2,2));
            
             
@@ -101,8 +112,7 @@ namespace CustomProtocol.Net
             return message;
         }
 
-        
-
+      
         
         
     }
