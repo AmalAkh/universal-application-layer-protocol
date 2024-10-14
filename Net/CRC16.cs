@@ -8,7 +8,7 @@ namespace CustomProtocol.Net
     {
         ushort key;
         ushort[] table;
-        public CRC16(ushort key)
+        public CRC16(ushort key = 0x589)
         {
             this.key = key;
             table = new ushort[256];
@@ -39,5 +39,6 @@ namespace CustomProtocol.Net
             }
             return crc;
         }
+        
     }
 }
