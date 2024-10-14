@@ -10,11 +10,18 @@ namespace CustomProtocol.Net
         protected ushort listeningPort;
         protected string listeningAddress;
 
+        protected string TargetAddress;
+        protected ushort TargetPort;
+
+
+        protected Socket TargetSocket;
         protected bool IsConnectionEstablished = false;
         public UdpServer(ushort port, string address = "127.0.0.1")
         {
             this.listeningPort = port;
             this.listeningAddress = address;
+
+            
         }
         
         public void StartListening()
@@ -28,13 +35,22 @@ namespace CustomProtocol.Net
                 Console.WriteLine($"Listening on address {listeningAddress} on port {listeningPort}");
                 
                 socket.Bind(new IPEndPoint(IPAddress.Parse(listeningAddress), listeningPort));
+              
 
                     while(true)
                     {
                         byte[] bytes = new byte[1500];
-                        int bytesCount = await socket.ReceiveAsync(bytes);
-                        
-                        Console.WriteLine($"Received - {bytesCount}");
+                        IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
+                        SocketReceiveFromResult receiveFromResult = await socket.ReceiveFromAsync(bytes, endPoint);
+
+                        Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
+
+                        CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
+                        if(!IsConnectionEstablished &&  incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
+                        {
+                            
+                            
+                        }
                     }
             });
             task.Start();
@@ -42,10 +58,9 @@ namespace CustomProtocol.Net
         
         public void Connect(ushort port, string address = "127.0.0.1")
         {
-            CustomProtocolMessage synMessage = new CustomProtocolMessage();
+           
 
-            synMessage.SetFlag(CustomProtocolFlag.Syn, true);
-            synMessage.Data = [..BitConverter.GetBytes(port)];
+
         }
 
         /// <summary>

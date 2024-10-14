@@ -7,7 +7,7 @@ namespace CustomProtocol.Net
 {
     public enum CustomProtocolFlag
     {
-        Ack, Syn, Last, Ping,Pong
+        Ack = 0, Syn = 1, Last = 2, Ping = 3,Pong = 4
     }
     public class CustomProtocolMessage
     {
