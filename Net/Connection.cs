@@ -5,6 +5,10 @@ using System.Net.Sockets;
 
 namespace CustomProtocol.Net
 {
+    public enum UdpServerStatus
+    {
+        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutcomingConnectionAck
+    }
     public class UdpServer
     {
        
@@ -14,13 +18,19 @@ namespace CustomProtocol.Net
 
         protected Socket SendingSocket;
         protected Socket ListeningSocket;
-        protected bool IsConnectionEstablished = false;
+        public UdpServerStatus status;
+        public UdpServerStatus Status
+        {
+            get;
+        }
         public UdpServer()
         {
 
         }
-
-
+        protected UInt32 MessageSize;
+        protected EndPoint TargetEndPoint;
+        protected string TargetAddress;
+        
         public void Start(string address, ushort listeningPort, ushort sendingPort)
         {
             ListeningSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
@@ -28,10 +38,12 @@ namespace CustomProtocol.Net
 
             SendingSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
             SendingSocket.Bind(new IPEndPoint(IPAddress.Parse(address), sendingPort));
-
+            StartListening();
             Console.WriteLine($"Listening on address {address} on port {listeningPort}");
-            Console.WriteLine($"Listening on address {address} on port {sendingPort}");
+            Console.WriteLine($"Sending using address {address} on port {sendingPort}");
 
+
+            
         }
         
         protected void StartListening()
@@ -48,21 +60,43 @@ namespace CustomProtocol.Net
                         Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
                         CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
-                        if(!IsConnectionEstablished &&  incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
+                        if(status == UdpServerStatus.Unconnected &&  incomingMessage.Flags[(int)CustomProtocolFlag.Syn] && !incomingMessage.Flags[(int)CustomProtocolFlag.Ack])
                         {
                             
-                                                    
+                         
+                            TargetEndPoint = receiveFromResult.RemoteEndPoint;
+                            MessageSize = BitConverter.ToUInt16(incomingMessage.Data);
+
+
+                            CustomProtocolMessage ackMessage = new CustomProtocolMessage();
+                            ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
+                            ackMessage.SetFlag(CustomProtocolFlag.Syn, true);
+
+
+                            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
+
+                            status = UdpServerStatus.WaitingForIncomingConnectionAck;
+                            Console.WriteLine("Waiting for acknoledgement");
+
+
+                        }else if(status == UdpServerStatus.WaitingForIncomingConnectionAck && incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
+                        {
+                            status = UdpServerStatus.Connected;
+                            Console.WriteLine("Connected");
                         }
+
                     }
             });
             task.Start();
         }
         
-        public void Connect(ushort port, string address = "127.0.0.1")
+        public async Task Connect(ushort port, string address,UInt16 messageSize)
         {
            
-
-
+            CustomProtocolMessage ackMessage = new CustomProtocolMessage();
+            ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
+            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
+            
         }
 
         /// <summary>

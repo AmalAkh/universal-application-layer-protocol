@@ -19,13 +19,11 @@ namespace CustomProtocol.Net
 
         protected static CRC16 CRC16Implementation = new CRC16();
 
-        
-        public UInt16 HeaderCheckSum;
 
         public  byte[] Data;
         
 
-        public UInt16 DataCheckSum;
+        public UInt16 CheckSum;
 
         public CustomProtocolMessage()
         {
@@ -57,19 +55,14 @@ namespace CustomProtocol.Net
             }
 
 
-            CRC16 crc16 = new CRC16();
+           
 
 
-            HeaderCheckSum = crc16.Compute([..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte]);
+           
+            CheckSum = CRC16Implementation.Compute([..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data]);
 
-
-            DataCheckSum = crc16.Compute(Data);
-
-            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data, ..BitConverter.GetBytes(DataCheckSum)];
-            if(BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(bytes);
-            }
+            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data, BitConverter.GetBytes(CheckSum)[1],BitConverter.GetBytes(CheckSum)[0]];
+         
             return  bytes;
             
 
@@ -79,10 +72,7 @@ namespace CustomProtocol.Net
         {
             
             CustomProtocolMessage message = new CustomProtocolMessage();
-            if(BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(bytes);
-            }
+           
             message.SequenceNumber = BitConverter.ToUInt32(new ReadOnlySpan<byte>(bytes, 0,4));
             message.Id = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 4,2));
             
@@ -97,11 +87,11 @@ namespace CustomProtocol.Net
             
 
             message.Data = bytes.Take(new Range(9, bytes.Length -2)).ToArray<byte>();
-            if(CRC16Implementation.Compute([..message.Data, bytes[bytes.Length-1], bytes[bytes.Length-2]]) != 0)
+            if(CRC16Implementation.Compute(bytes) != 0)
             {
                 throw new Exception("Checksum");
             }
-            message.DataCheckSum =  BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, bytes.Length-2,2));
+            message.CheckSum =  BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, bytes.Length-2,2));
            
             
          

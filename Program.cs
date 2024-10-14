@@ -26,13 +26,14 @@ var text = Encoding.ASCII.GetString(newMsg.Data);
 
 
 
-
+/*
 Console.Write("Enter address for listening:");
 string address = Console.ReadLine();
 Console.Write("Enter port for listening:");
-ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
+ushort listeningPort = Convert.ToUInt16(Console.ReadLine());*/
 UdpServer udpServer = new UdpServer();
-udpServer.Start(address, listeningPort, 9090);
+
+udpServer.Start("127.0.0.1", 5050, 9911);
 
 
 while(true)
@@ -50,7 +51,8 @@ while(true)
         ushort targetPort = Convert.ToUInt16(CLIArgsParser.GetArg(cmdArgs, "-p", "5050"));
         
 
-        
+        await udpServer.Connect(targetPort,targetIP, 50);
+
     }
 
 }
