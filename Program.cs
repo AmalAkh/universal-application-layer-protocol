@@ -30,8 +30,8 @@ var text = Encoding.ASCII.GetString(newMsg.Data);
 
 Console.Write("Enter port for listening:");
 ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
-UdpServer udpServer = new UdpServer(listeningPort);
-udpServer.StartListening();
+UdpServer udpServer = new UdpServer();
+udpServer.Start("127.0.0.1", listeningPort, 9090);
 
 
 while(true)

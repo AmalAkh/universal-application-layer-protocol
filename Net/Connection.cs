@@ -7,41 +7,41 @@ namespace CustomProtocol.Net
 {
     public class UdpServer
     {
-        protected ushort listeningPort;
-        protected string listeningAddress;
+       
 
-        protected string TargetAddress;
-        protected ushort TargetPort;
+        
 
 
-        protected Socket TargetSocket;
+        protected Socket SendingSocket;
+        protected Socket ListeningSocket;
         protected bool IsConnectionEstablished = false;
-        public UdpServer(ushort port, string address = "127.0.0.1")
+        public UdpServer()
         {
-            this.listeningPort = port;
-            this.listeningAddress = address;
 
-            
+        }
+        public void Start(string address, ushort listeningPort, ushort sendingPort)
+        {
+            ListeningSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
+            ListeningSocket.Bind(new IPEndPoint(IPAddress.Parse(address), listeningPort));
+
+            SendingSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
+            SendingSocket.Bind(new IPEndPoint(IPAddress.Parse(address), sendingPort));
+
+            Console.WriteLine($"Listening on address {address} on port {listeningPort}");
+            Console.WriteLine($"Listening on address {address} on port {sendingPort}");
+
         }
         
-        public void StartListening()
+        protected void StartListening()
         {
             Task task = new Task(async()=>
             {
-                    
-                var socket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
-                
-                //Dns.GetHostAddresses(Dns.GetHostName())[0]
-                Console.WriteLine($"Listening on address {listeningAddress} on port {listeningPort}");
-                
-                socket.Bind(new IPEndPoint(IPAddress.Parse(listeningAddress), listeningPort));
-              
 
                     while(true)
                     {
                         byte[] bytes = new byte[1500];
                         IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
-                        SocketReceiveFromResult receiveFromResult = await socket.ReceiveFromAsync(bytes, endPoint);
+                        SocketReceiveFromResult receiveFromResult = await ListeningSocket.ReceiveFromAsync(bytes, endPoint);
 
                         Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
