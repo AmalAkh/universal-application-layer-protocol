@@ -19,6 +19,8 @@ namespace CustomProtocol.Net
         {
 
         }
+
+
         public void Start(string address, ushort listeningPort, ushort sendingPort)
         {
             ListeningSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
@@ -49,7 +51,7 @@ namespace CustomProtocol.Net
                         if(!IsConnectionEstablished &&  incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
                         {
                             
-                            
+                                                    
                         }
                     }
             });

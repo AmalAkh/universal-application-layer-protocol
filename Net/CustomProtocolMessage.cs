@@ -7,13 +7,15 @@ namespace CustomProtocol.Net
 {
     public enum CustomProtocolFlag
     {
-        Ack = 0, Syn = 1, Last = 2, Ping = 3,Pong = 4
+        Ack = 0, Syn = 1, Last = 2, Ping = 3,Pong = 4, File=5, Finish=6
     }
     public class CustomProtocolMessage
     {
         public UInt32 SequenceNumber;
         public UInt16 Id;
         public bool[] Flags;
+
+        public UInt16 FilenameOffset;
 
         protected static CRC16 CRC16Implementation = new CRC16();
 
@@ -29,6 +31,7 @@ namespace CustomProtocol.Net
         {
             Flags = new bool[8];
             Data = new byte[1];
+            FilenameOffset = 0;
         }
     
         public void SetFlag(CustomProtocolFlag flag, bool value)
@@ -62,7 +65,7 @@ namespace CustomProtocol.Net
 
             DataCheckSum = crc16.Compute(Data);
 
-            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte, ..BitConverter.GetBytes(HeaderCheckSum) ,..Data, ..BitConverter.GetBytes(DataCheckSum)];
+            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data, ..BitConverter.GetBytes(DataCheckSum)];
             if(BitConverter.IsLittleEndian)
             {
                 Array.Reverse(bytes);
@@ -74,10 +77,7 @@ namespace CustomProtocol.Net
         }
         public static CustomProtocolMessage FromBytes(byte[] bytes)
         {
-            if(bytes.Length < 11)
-            {
-                throw new Exception("Message is too small");
-            }
+            
             CustomProtocolMessage message = new CustomProtocolMessage();
             if(BitConverter.IsLittleEndian)
             {
@@ -90,13 +90,9 @@ namespace CustomProtocol.Net
             bitArray.CopyTo(message.Flags, 0);
             Array.Reverse(message.Flags);
 
-            message.HeaderCheckSum = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 7,2));
+         
 
 
-            if(CRC16Implementation.Compute([..bytes.Take(new Range(0,7)), bytes[8], bytes[7]]) != 0)
-            {
-                throw new Exception("Checksum");
-            }
 
             
 
