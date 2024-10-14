@@ -7,12 +7,12 @@ namespace CustomProtocol.Net
 {
     public class UdpServer
     {
-        protected ushort port;
-        protected string address;
+        protected ushort listeningPort;
+        protected string listeningAddress;
         public UdpServer(ushort port, string address = "127.0.0.1")
         {
-            this.port = port;
-            this.address = address;
+            this.listeningPort = port;
+            this.listeningAddress = address;
         }
 
         public void StartListening()
@@ -23,9 +23,9 @@ namespace CustomProtocol.Net
                 var socket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
                 
                 //Dns.GetHostAddresses(Dns.GetHostName())[0]
-                Console.WriteLine($"Listening on address {address} on port {port}");
+                Console.WriteLine($"Listening on address {listeningAddress} on port {listeningPort}");
                 
-                socket.Bind(new IPEndPoint(IPAddress.Parse(address), port));
+                socket.Bind(new IPEndPoint(IPAddress.Parse(listeningAddress), listeningPort));
 
                     while(true)
                     {
@@ -36,10 +36,13 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
-
+        
         public void Connect(ushort port, string address = "127.0.0.1")
         {
+            CustomProtocolMessage synMessage = new CustomProtocolMessage();
 
+            synMessage.SetFlag(CustomProtocolFlag.Syn, true);
+            synMessage.Data = [..BitConverter.GetBytes(port)];
         }
 
         /// <summary>
