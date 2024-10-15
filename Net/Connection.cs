@@ -7,132 +7,57 @@ using System.Net.Sockets;
 
 namespace CustomProtocol.Net
 {
-    public enum UdpServerStatus
+    public enum ConnectionStatus
     {
-        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck
+        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck, WaitingForDisConnectionAck
     }
-    public class UdpServer
+    public class Connection
     {
        
 
         
 
 
-        protected Socket SendingSocket;
-        protected Socket ListeningSocket;
-        public UdpServerStatus status;
-        public UdpServerStatus Status
+        private Socket _sendingSocket;
+        private Socket _listeningSocket;
+        private ConnectionStatus _status;
+        public ConnectionStatus Status
         {
             get;
         }
-        public UdpServer()
+        public Connection(Socket listeningSocket,Socket sendingSocket)
         {
-
+            this._sendingSocket = sendingSocket;
+            this._listeningSocket = listeningSocket;
         }
-        protected UInt32 MessageSize;
-        protected EndPoint TargetEndPoint;
+
+        private EndPoint _currentEndPoint;
         protected string TargetAddress;
 
 
-        private int connectionTimeout = 20000;
+        private int _connectionTimeout = 20000;
         public int ConnectionTimeout
         {
             get
             {
-                return connectionTimeout;
+                return _connectionTimeout;
             }
             set
             {
                 if(value > 0)
                 {
-                    connectionTimeout = value;
+                    _connectionTimeout = value;
                 }
             }
         }
-        private int currentConnectionTime = 0;
+        private int _currentConnectionTime = 0;
         
 
-        private int unrespondedPingPongRequests = 0;
+        private int _unrespondedPingPongRequests = 0;
         
-        public void Start(string address, ushort listeningPort, ushort sendingPort)
-        {
-            ListeningSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
-            ListeningSocket.Bind(new IPEndPoint(IPAddress.Parse(address), listeningPort));
-
-            SendingSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
-            SendingSocket.Bind(new IPEndPoint(IPAddress.Parse(address), sendingPort));
-            StartListening();
-            Console.WriteLine($"Listening on address {address} on port {listeningPort}");
-            Console.WriteLine($"Sending using address {address} on port {sendingPort}");
-
-
-            
-        }
+        
        
-        protected void StartListening()
-        {
-           
-        
-            Task task = new Task(async()=>
-            {
-
-                    while(true)
-                    {
-                        byte[] bytes = new byte[1500];//buffer
-                        IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
-                        SocketReceiveFromResult receiveFromResult = await ListeningSocket.ReceiveFromAsync(bytes, endPoint);
-
-                        Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
-
-                        CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
-
-                        if(( currentConnectionTime > connectionTimeout || unrespondedPingPongRequests > 3) && ( status == UdpServerStatus.WaitingForIncomingConnectionAck || status == UdpServerStatus.WaitingForOutgoingConnectionAck))
-                        {   
-                            status = UdpServerStatus.Unconnected; 
-                            StopConnectionTimer();  
-                        }
-                        if(status == UdpServerStatus.Unconnected &&  incomingMessage.Flags[(int)CustomProtocolFlag.Syn] && !incomingMessage.Flags[(int)CustomProtocolFlag.Ack])
-                        {
-                            
-                            
-                            TargetEndPoint = receiveFromResult.RemoteEndPoint;
-                            MessageSize = BitConverter.ToUInt16(incomingMessage.Data);
-
-
-                            CustomProtocolMessage ackMessage = new CustomProtocolMessage();
-                            ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
-                            ackMessage.SetFlag(CustomProtocolFlag.Syn, true);
-
-
-                            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
-                            StartConnectionTimer();
-                            
-                            status = UdpServerStatus.WaitingForIncomingConnectionAck;
-                            Console.WriteLine("Waiting for acknoledgement");
-
-
-                        }else if(status == UdpServerStatus.WaitingForIncomingConnectionAck && incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
-                        {
-                            
-                            
-                            status = UdpServerStatus.Connected;
-                            StopConnectionTimer();
-                            StartPingPong();
-                            Console.WriteLine("Connected");
-                        }
-                        else if(status == UdpServerStatus.Connected && incomingMessage.Flags[(int)CustomProtocolFlag.Pong])
-                        {
-                            
-                            
-                            unrespondedPingPongRequests-=1;
-                        }
-
-                    }
-            });
-            task.Start();
-        }
-
-        public async Task StartPingPong()
+        /*public async Task StartPingPong()
         {
             
             await Task.Run(async ()=>
@@ -144,15 +69,15 @@ namespace CustomProtocol.Net
                     
                     CustomProtocolMessage pingMessage = new CustomProtocolMessage();
                     pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
-                    await SendingSocket.SendToAsync(pingMessage.ToByteArray(), TargetEndPoint);
+                    await SendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
                     unrespondedPingPongRequests+=1;
-                    await Task.Delay(5000);
+                    
                 }
                 Console.WriteLine("Disconnected from host");
                
 
             });
-        }
+        }*/
 
         CancellationTokenSource connectionTimerTokenCancallationSource = new CancellationTokenSource();
         protected async Task StartConnectionTimer()
@@ -161,18 +86,14 @@ namespace CustomProtocol.Net
             await Task.Run(async ()=>
             {
 
-                while(currentConnectionTime <= connectionTimeout)
+                while(_currentConnectionTime <= _connectionTimeout)
                 {
                     await Task.Delay(100);
-                    currentConnectionTime+=100;
+                    _currentConnectionTime+=100;
                     if(connectionTimerTokenCancallationSource.Token.IsCancellationRequested)
                     {
                         connectionTimerTokenCancallationSource.Token.ThrowIfCancellationRequested();
                     }
-                   // Console.WriteLine(currentConnectionTime);
-                    
-                    
-
                 }
                 Console.WriteLine("Connection timeout");
             },connectionTimerTokenCancallationSource.Token);
@@ -182,40 +103,80 @@ namespace CustomProtocol.Net
             if(connectionTimerTokenCancallationSource != null)
             {
                 connectionTimerTokenCancallationSource.Cancel();
-                currentConnectionTime = 0;
+                _currentConnectionTime = 0;
             }
         }
-        public async Task Connect(ushort port, string address,UInt16 messageSize)
+        public async Task Connect(ushort port, string address)
         {
            
             CustomProtocolMessage ackMessage = new CustomProtocolMessage();
             ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
-            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), new IPEndPoint(IPAddress.Parse(address), port));
-            status = UdpServerStatus.WaitingForOutgoingConnectionAck;
+            await _sendingSocket.SendToAsync(ackMessage.ToByteArray(), new IPEndPoint(IPAddress.Parse(address), port));
+            _status = ConnectionStatus.WaitingForOutgoingConnectionAck;
             
-            status = UdpServerStatus.WaitingForOutgoingConnectionAck;
+            _status = ConnectionStatus.WaitingForOutgoingConnectionAck;
             Console.WriteLine("Trying to connect...");
             await StartConnectionTimer();
-
-           
-            
-            
-
-            
         }
-
-        /// <summary>
-        /// Get maxumum payload size in bytes available for this network
-        /// </summary>
-        public static int GetMaximumUdpPayloadSize()
+        public async Task StartPingPong()
         {
-            //in progress
-            /*NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
-            foreach(NetworkInterface adapter in interfaces)
+            
+            await Task.Run(async ()=>
             {
+                
+               await Task.Delay(5000);
+                while(_unrespondedPingPongRequests < 3)
+                {
+                    
+                    CustomProtocolMessage pingMessage = new CustomProtocolMessage();
+                    pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
+                    await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
+                    _unrespondedPingPongRequests+=1;
+                    
+                }
+                Console.WriteLine("Disconnected from host");
+               
 
-            }*/
-            return 1500-60-4;
+            });
+        }
+        public async Task HandleMessage(CustomProtocolMessage message, EndPoint senderEndPoint)
+        {
+            if(( _currentConnectionTime > _connectionTimeout || _unrespondedPingPongRequests > 3) && ( _status == ConnectionStatus.WaitingForIncomingConnectionAck  || _status == ConnectionStatus.WaitingForOutgoingConnectionAck))
+            {   
+                _status = ConnectionStatus.Unconnected;
+                _currentEndPoint = null;
+                StopConnectionTimer();  
+            }
+            if(_status == ConnectionStatus.Unconnected &&  message.Flags[(int)CustomProtocolFlag.Syn] && !message.Flags[(int)CustomProtocolFlag.Ack])
+            {
+                            
+                CustomProtocolMessage ackMessage = new CustomProtocolMessage();
+                ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
+                ackMessage.SetFlag(CustomProtocolFlag.Syn, true);
+                _currentEndPoint = senderEndPoint;
+
+                await _sendingSocket.SendToAsync(ackMessage.ToByteArray(), _currentEndPoint);
+                StartConnectionTimer();
+                            
+                _status = ConnectionStatus.WaitingForIncomingConnectionAck;
+                Console.WriteLine("Waiting for acknoledgement");
+
+
+                }else if(_status == ConnectionStatus.WaitingForIncomingConnectionAck && message.Flags[(int)CustomProtocolFlag.Ack] && !message.Flags[(int)CustomProtocolFlag.Syn])
+                {
+                                          
+                    _status = ConnectionStatus.Connected;
+                    StopConnectionTimer();
+                    StartPingPong();
+                    Console.WriteLine("Connected");
+                }
+                else if(_status == ConnectionStatus.Connected && message.Flags[(int)CustomProtocolFlag.Pong])
+                {
+                            
+                            
+                    _unrespondedPingPongRequests-=1;
+                }
+
         }
 
 
