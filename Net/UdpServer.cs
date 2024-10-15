@@ -53,19 +53,19 @@ namespace CustomProtocol.Net
             Task task = new Task(async()=>
             {
 
-                    while(true)
-                    {
-                        byte[] bytes = new byte[1500];//buffer
-                        IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
-                        SocketReceiveFromResult receiveFromResult = await _listeningSocket.ReceiveFromAsync(bytes, endPoint);
+                while(true)
+                {
+                    byte[] bytes = new byte[1500];//buffer
+                    IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
+                    SocketReceiveFromResult receiveFromResult = await _listeningSocket.ReceiveFromAsync(bytes, endPoint);
 
-                        Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
+                    Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
-                        CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
+                    CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
 
-                        await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
+                    await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
 
-                    }
+                }
             });
             task.Start();
         }
