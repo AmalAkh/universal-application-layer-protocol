@@ -34,7 +34,7 @@ namespace CustomProtocol.Net
         protected string TargetAddress;
 
 
-        private int connectionTimeout = 10000;
+        private int connectionTimeout = 20000;
         public int ConnectionTimeout
         {
             get
@@ -50,6 +50,9 @@ namespace CustomProtocol.Net
             }
         }
         private bool isConnectionExceededTimeout = false;
+        private bool isConnectionLost = false;
+
+        private int unrespondedPingPongRequests = 0;
         
         public void Start(string address, ushort listeningPort, ushort sendingPort)
         {
@@ -82,7 +85,7 @@ namespace CustomProtocol.Net
 
                         CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
 
-                        if(isConnectionExceededTimeout)
+                        if(isConnectionExceededTimeout && isConnectionLost)
                         {
                             status = UdpServerStatus.Unconnected;
                             isConnectionExceededTimeout = false;  
@@ -112,14 +115,37 @@ namespace CustomProtocol.Net
                             
                             
                             status = UdpServerStatus.Connected;
+                            StartPingPong();
                             Console.WriteLine("Connected");
+                        }
+                        else if(status == UdpServerStatus.Connected && incomingMessage.Flags[(int)CustomProtocolFlag.Pong])
+                        {
+                            
+                            
+                            unrespondedPingPongRequests-=1;
                         }
 
                     }
             });
             task.Start();
         }
-        
+        public async Task StartPingPong()
+        {
+            
+            await Task.Run(async ()=>
+            {
+                await Task.Delay(5000);
+                while(unrespondedPingPongRequests < 3)
+                {
+                    CustomProtocolMessage ackMessage = new CustomProtocolMessage();
+                    ackMessage.SetFlag(CustomProtocolFlag.Ping, true);
+                    await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
+                    unrespondedPingPongRequests+=1;
+                }
+                isConnectionLost = true;
+
+            });
+        }
     
         public async Task StartConnectionTimer()
         {
