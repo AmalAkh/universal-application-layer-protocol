@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Net;
+using Timers = System.Timers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
@@ -7,7 +9,7 @@ namespace CustomProtocol.Net
 {
     public enum UdpServerStatus
     {
-        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutcomingConnectionAck
+        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck
     }
     public class UdpServer
     {
@@ -30,6 +32,24 @@ namespace CustomProtocol.Net
         protected UInt32 MessageSize;
         protected EndPoint TargetEndPoint;
         protected string TargetAddress;
+
+
+        private int connectionTimeout = 10000;
+        public int ConnectionTimeout
+        {
+            get
+            {
+                return connectionTimeout;
+            }
+            set
+            {
+                if(value > 0)
+                {
+                    connectionTimeout = value;
+                }
+            }
+        }
+        private bool isConnectionExceededTimeout = false;
         
         public void Start(string address, ushort listeningPort, ushort sendingPort)
         {
@@ -48,22 +68,29 @@ namespace CustomProtocol.Net
         
         protected void StartListening()
         {
+            
             Task task = new Task(async()=>
             {
 
                     while(true)
                     {
-                        byte[] bytes = new byte[1500];
+                        byte[] bytes = new byte[1500];//buffer
                         IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
                         SocketReceiveFromResult receiveFromResult = await ListeningSocket.ReceiveFromAsync(bytes, endPoint);
 
                         Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
                         CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
+
+                        if(isConnectionExceededTimeout)
+                        {
+                            status = UdpServerStatus.Unconnected;
+                            isConnectionExceededTimeout = false;  
+                        }
                         if(status == UdpServerStatus.Unconnected &&  incomingMessage.Flags[(int)CustomProtocolFlag.Syn] && !incomingMessage.Flags[(int)CustomProtocolFlag.Ack])
                         {
                             
-                         
+                            
                             TargetEndPoint = receiveFromResult.RemoteEndPoint;
                             MessageSize = BitConverter.ToUInt16(incomingMessage.Data);
 
@@ -74,13 +101,16 @@ namespace CustomProtocol.Net
 
 
                             await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
-
+                            StartConnectionTimer();
+                            
                             status = UdpServerStatus.WaitingForIncomingConnectionAck;
                             Console.WriteLine("Waiting for acknoledgement");
 
 
                         }else if(status == UdpServerStatus.WaitingForIncomingConnectionAck && incomingMessage.Flags[(int)CustomProtocolFlag.Ack] && !incomingMessage.Flags[(int)CustomProtocolFlag.Syn])
                         {
+                            
+                            
                             status = UdpServerStatus.Connected;
                             Console.WriteLine("Connected");
                         }
@@ -90,12 +120,44 @@ namespace CustomProtocol.Net
             task.Start();
         }
         
+    
+        public async Task StartConnectionTimer()
+        {
+            int currentTime = 0;
+            await Task.Run(async ()=>
+            {
+
+                while(status == UdpServerStatus.WaitingForOutgoingConnectionAck || status == UdpServerStatus.WaitingForIncomingConnectionAck)
+                {
+                    await Task.Delay(100);
+                   
+                    currentTime+=100;
+                    //Console.WriteLine(currentTime);
+                    if(currentTime >= ConnectionTimeout)
+                    {
+                        Console.WriteLine("Connection timeout");
+                        isConnectionExceededTimeout = true;
+                        return;
+                    }
+                }
+            });
+        }
         public async Task Connect(ushort port, string address,UInt16 messageSize)
         {
            
             CustomProtocolMessage ackMessage = new CustomProtocolMessage();
             ackMessage.SetFlag(CustomProtocolFlag.Ack, true);
-            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
+            await SendingSocket.SendToAsync(ackMessage.ToByteArray(), new IPEndPoint(IPAddress.Parse(address), port));
+            status = UdpServerStatus.WaitingForOutgoingConnectionAck;
+            
+            status = UdpServerStatus.WaitingForOutgoingConnectionAck;
+            Console.WriteLine("Trying to connect...");
+            await StartConnectionTimer();
+
+           
+            
+            
+
             
         }
 

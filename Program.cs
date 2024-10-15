@@ -50,7 +50,7 @@ while(true)
        
         ushort targetPort = Convert.ToUInt16(CLIArgsParser.GetArg(cmdArgs, "-p", "5050"));
         
-
+        Console.WriteLine("TEST COMMAND");
         await udpServer.Connect(targetPort,targetIP, 50);
 
     }
