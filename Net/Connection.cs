@@ -86,7 +86,7 @@ namespace CustomProtocol.Net
 
                         CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
 
-                        if(currentConnectionTime > connectionTimeout && ( status == UdpServerStatus.WaitingForIncomingConnectionAck || status == UdpServerStatus.WaitingForOutgoingConnectionAck))
+                        if(( currentConnectionTime > connectionTimeout || unrespondedPingPongRequests > 3) && ( status == UdpServerStatus.WaitingForIncomingConnectionAck || status == UdpServerStatus.WaitingForOutgoingConnectionAck))
                         {   
                             status = UdpServerStatus.Unconnected; 
                             StopConnectionTimer();  
@@ -131,20 +131,24 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
+
         public async Task StartPingPong()
         {
             
             await Task.Run(async ()=>
             {
-                await Task.Delay(5000);
-               
+                
+               await Task.Delay(5000);
                 while(unrespondedPingPongRequests < 3)
                 {
-                    CustomProtocolMessage ackMessage = new CustomProtocolMessage();
-                    ackMessage.SetFlag(CustomProtocolFlag.Ping, true);
-                    await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
+                    
+                    CustomProtocolMessage pingMessage = new CustomProtocolMessage();
+                    pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
+                    await SendingSocket.SendToAsync(pingMessage.ToByteArray(), TargetEndPoint);
                     unrespondedPingPongRequests+=1;
+                    await Task.Delay(5000);
                 }
+                Console.WriteLine("Disconnected from host");
                
 
             });
@@ -161,7 +165,11 @@ namespace CustomProtocol.Net
                 {
                     await Task.Delay(100);
                     currentConnectionTime+=100;
-                    //Console.WriteLine(currentConnectionTime);
+                    if(connectionTimerTokenCancallationSource.Token.IsCancellationRequested)
+                    {
+                        connectionTimerTokenCancallationSource.Token.ThrowIfCancellationRequested();
+                    }
+                   // Console.WriteLine(currentConnectionTime);
                     
                     
 
