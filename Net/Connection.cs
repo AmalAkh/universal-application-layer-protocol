@@ -49,8 +49,8 @@ namespace CustomProtocol.Net
                 }
             }
         }
-        private bool isConnectionExceededTimeout = false;
-        private bool isConnectionLost = false;
+        private int currentConnectionTime = 0;
+        
 
         private int unrespondedPingPongRequests = 0;
         
@@ -68,10 +68,11 @@ namespace CustomProtocol.Net
 
             
         }
-        
+       
         protected void StartListening()
         {
-            
+           
+        
             Task task = new Task(async()=>
             {
 
@@ -85,10 +86,10 @@ namespace CustomProtocol.Net
 
                         CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
 
-                        if(isConnectionExceededTimeout && isConnectionLost)
-                        {
-                            status = UdpServerStatus.Unconnected;
-                            isConnectionExceededTimeout = false;  
+                        if(currentConnectionTime > connectionTimeout && ( status == UdpServerStatus.WaitingForIncomingConnectionAck || status == UdpServerStatus.WaitingForOutgoingConnectionAck))
+                        {   
+                            status = UdpServerStatus.Unconnected; 
+                            StopConnectionTimer();  
                         }
                         if(status == UdpServerStatus.Unconnected &&  incomingMessage.Flags[(int)CustomProtocolFlag.Syn] && !incomingMessage.Flags[(int)CustomProtocolFlag.Ack])
                         {
@@ -115,6 +116,7 @@ namespace CustomProtocol.Net
                             
                             
                             status = UdpServerStatus.Connected;
+                            StopConnectionTimer();
                             StartPingPong();
                             Console.WriteLine("Connected");
                         }
@@ -135,6 +137,7 @@ namespace CustomProtocol.Net
             await Task.Run(async ()=>
             {
                 await Task.Delay(5000);
+               
                 while(unrespondedPingPongRequests < 3)
                 {
                     CustomProtocolMessage ackMessage = new CustomProtocolMessage();
@@ -142,31 +145,37 @@ namespace CustomProtocol.Net
                     await SendingSocket.SendToAsync(ackMessage.ToByteArray(), TargetEndPoint);
                     unrespondedPingPongRequests+=1;
                 }
-                isConnectionLost = true;
+               
 
             });
         }
-    
-        public async Task StartConnectionTimer()
+
+        CancellationTokenSource connectionTimerTokenCancallationSource = new CancellationTokenSource();
+        protected async Task StartConnectionTimer()
         {
-            int currentTime = 0;
+            
             await Task.Run(async ()=>
             {
 
-                while(status == UdpServerStatus.WaitingForOutgoingConnectionAck || status == UdpServerStatus.WaitingForIncomingConnectionAck)
+                while(currentConnectionTime <= connectionTimeout)
                 {
                     await Task.Delay(100);
-                   
-                    currentTime+=100;
-                    //Console.WriteLine(currentTime);
-                    if(currentTime >= ConnectionTimeout)
-                    {
-                        Console.WriteLine("Connection timeout");
-                        isConnectionExceededTimeout = true;
-                        return;
-                    }
+                    currentConnectionTime+=100;
+                    //Console.WriteLine(currentConnectionTime);
+                    
+                    
+
                 }
-            });
+                Console.WriteLine("Connection timeout");
+            },connectionTimerTokenCancallationSource.Token);
+        }
+        protected void StopConnectionTimer()
+        {
+            if(connectionTimerTokenCancallationSource != null)
+            {
+                connectionTimerTokenCancallationSource.Cancel();
+                currentConnectionTime = 0;
+            }
         }
         public async Task Connect(ushort port, string address,UInt16 messageSize)
         {
