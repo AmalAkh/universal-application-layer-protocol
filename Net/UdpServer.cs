@@ -61,7 +61,7 @@ namespace CustomProtocol.Net
 
                     Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
-                    CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes);
+                    CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
 
                     await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
 

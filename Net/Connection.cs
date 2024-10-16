@@ -3,6 +3,7 @@ using System.Net;
 using Timers = System.Timers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text;
 
 
 namespace CustomProtocol.Net
@@ -15,7 +16,7 @@ namespace CustomProtocol.Net
     {
        
 
-        
+        List<CustomProtocolMessage> _messagePull = new List<CustomProtocolMessage>();
 
 
         private Socket _sendingSocket;
@@ -103,7 +104,7 @@ namespace CustomProtocol.Net
             await Task.Run(async ()=>
             {
                 
-               await Task.Delay(5000);
+                await Task.Delay(5000);
                 while(_unrespondedPingPongRequests < 3)
                 {
                     
@@ -111,6 +112,7 @@ namespace CustomProtocol.Net
                     pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
                     await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
                     _unrespondedPingPongRequests+=1;
+                    await Task.Delay(5000);
                     
                 }
                 Console.WriteLine("Disconnected from host");
@@ -142,7 +144,17 @@ namespace CustomProtocol.Net
                 _unrespondedPingPongRequests-=1;
             }else if(_status == ConnectionStatus.Connected)
             {
-                    
+                if(message.Flags[(int)CustomProtocolFlag.Last] && message.SequenceNumber == 0)
+                {
+                    if(message.Flags[(int)CustomProtocolFlag.File])
+                    {
+
+                    }else
+                    {
+                        Console.WriteLine("New text message");
+                        Console.WriteLine(Encoding.ASCII.GetString(message.Data));
+                    }
+                }
             }
 
         }
