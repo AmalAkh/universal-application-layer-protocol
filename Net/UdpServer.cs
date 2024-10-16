@@ -58,8 +58,8 @@ namespace CustomProtocol.Net
                     byte[] bytes = new byte[1500];//buffer
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
                     SocketReceiveFromResult receiveFromResult = await _listeningSocket.ReceiveFromAsync(bytes, endPoint);
-
-                    Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
+                    
+                    //Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
                     CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
 
@@ -76,6 +76,13 @@ namespace CustomProtocol.Net
         {
            
             await _connection.Connect(port, address);
+
+            
+        }
+        public async Task Disconnect()
+        {
+           
+            await _connection.Disconnect();
 
             
         }
