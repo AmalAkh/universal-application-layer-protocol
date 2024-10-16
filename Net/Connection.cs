@@ -10,7 +10,7 @@ namespace CustomProtocol.Net
 {
     public enum ConnectionStatus
     {
-        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck, WaitingForDisconnectionAck
+        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck, WaitingForDisconnection
     }
     public class Connection
     {
@@ -24,7 +24,10 @@ namespace CustomProtocol.Net
         private ConnectionStatus _status = ConnectionStatus.Unconnected;
         public ConnectionStatus Status
         {
-            get;
+            get
+            {
+                return _status;
+            }
         }
         public Connection(Socket listeningSocket,Socket sendingSocket)
         {
@@ -59,26 +62,36 @@ namespace CustomProtocol.Net
         
        
 
-        CancellationTokenSource connectionTimerTokenCancallationSource;
+        CancellationTokenSource _connectionTimerTokenCancallationSource;
         protected async Task StartConnectionTimer()
         {
-            connectionTimerTokenCancallationSource = new CancellationTokenSource();
-            await Task.Run(async ()=>
+            try
+            {
+                _connectionTimerTokenCancallationSource = new CancellationTokenSource();
+                await Task.Run(async ()=>
+                {
+
+                    while(_currentConnectionTime <= _connectionTimeout)
+                    {
+                        _connectionTimerTokenCancallationSource.Token.ThrowIfCancellationRequested();
+                        await Task.Delay(100);
+                        _connectionTimerTokenCancallationSource.Token.ThrowIfCancellationRequested();
+                    
+                        _currentConnectionTime+=100;
+                        Console.WriteLine(_currentConnectionTime);
+                        
+                    }
+                    Console.WriteLine("Connection timeout");
+                },_connectionTimerTokenCancallationSource.Token);
+            }catch(Exception e)
             {
 
-                while(_currentConnectionTime <= _connectionTimeout)
-                {
-                    await Task.Delay(100);
-                    _currentConnectionTime+=100;
-                    
-                }
-                Console.WriteLine("Connection timeout");
-            },connectionTimerTokenCancallationSource.Token);
+            }
         }
         protected void StopConnectionTimer()
         {
             _currentConnectionTime = 0; 
-            connectionTimerTokenCancallationSource.Cancel();
+            _connectionTimerTokenCancallationSource.Cancel();
            
             
         }
@@ -108,25 +121,32 @@ namespace CustomProtocol.Net
         private CancellationTokenSource _pingPongCancellationTokenSource = new CancellationTokenSource();
         public async Task StartPingPong()
         {
-            
-            await Task.Run(async ()=>
+            try
             {
-                
-                await Task.Delay(5000);
-                while(_unrespondedPingPongRequests < 3)
+                _pingPongCancellationTokenSource = new CancellationTokenSource();
+                await Task.Run(async ()=>
                 {
-                    
-                    CustomProtocolMessage pingMessage = new CustomProtocolMessage();
-                    pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
-                    await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
-                    _unrespondedPingPongRequests+=1;
+                    _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                     await Task.Delay(5000);
+                    _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    while(_unrespondedPingPongRequests < 3)
+                    {
                     
-                }
-                Console.WriteLine("Disconnected from host");
-               
+                        CustomProtocolMessage pingMessage = new CustomProtocolMessage();
+                        pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
+                        await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
+                        _unrespondedPingPongRequests+=1;
+                        await Task.Delay(5000);
+                        
+                    }
+                    Console.WriteLine("Disconnected from host");
+                
 
-            }, _pingPongCancellationTokenSource.Token);
+                }, _pingPongCancellationTokenSource.Token);
+            }catch(Exception e)
+            {
+
+            }
         }
         private void StopPingPong()
         {
@@ -135,10 +155,11 @@ namespace CustomProtocol.Net
         }
         public async Task HandleMessage(CustomProtocolMessage message, EndPoint senderEndPoint)
         {
-
+         
             if(( _currentConnectionTime > _connectionTimeout || _unrespondedPingPongRequests > 3) && ( _status == ConnectionStatus.WaitingForIncomingConnectionAck  || _status == ConnectionStatus.WaitingForOutgoingConnectionAck))
             {   
                 await InterruptConnectionHandshake();
+                
             }
             if(_status == ConnectionStatus.Unconnected &&  message.Flags[(int)CustomProtocolFlag.Syn] && !message.Flags[(int)CustomProtocolFlag.Ack])
             {
@@ -170,10 +191,11 @@ namespace CustomProtocol.Net
             {
          
                 _unrespondedPingPongRequests-=1;
-            }else if(_status == ConnectionStatus.WaitingForDisconnectionAck && message.Flags[(int)CustomProtocolFlag.Finish])
+            }else if(_status == ConnectionStatus.Connected && message.Flags[(int)CustomProtocolFlag.Finish])
             {
                 StopPingPong();
                 _status = ConnectionStatus.Unconnected;
+                Console.WriteLine("Disconnected");
 
             }else if(message.Flags[(int)CustomProtocolFlag.Ping])
             {

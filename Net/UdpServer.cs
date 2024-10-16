@@ -81,8 +81,9 @@ namespace CustomProtocol.Net
         }
         public async Task Disconnect()
         {
-           
+            Console.WriteLine("Disconnecting.....");
             await _connection.Disconnect();
+            Console.WriteLine("Disconnected");
 
             
         }

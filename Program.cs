@@ -43,6 +43,9 @@ while(true)
       
         await udpServer.Connect(targetPort,targetIP);
 
+    }else if(command.StartsWith("disconnect"))
+    {
+        await udpServer.Disconnect();
     }
 
 }
