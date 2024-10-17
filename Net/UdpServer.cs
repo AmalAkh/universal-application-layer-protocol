@@ -151,7 +151,7 @@ namespace CustomProtocol.Net
             }
         }
         private int _windowSize = 4;
-        public async Task SendTextMessage(string text, int fragmentSize = 5)
+        public async Task SendTextMessage(string text, uint fragmentSize = 5)
         {
             byte[] bytes = Encoding.ASCII.GetBytes(text);
             UInt16 id = (UInt16)Random.Shared.Next(0,Int16.MaxValue);
@@ -168,7 +168,7 @@ namespace CustomProtocol.Net
             {
              
                 int currentWindow = 0;
-                for(int i = 0; i < bytes.Length; i+=fragmentSize)
+                for(uint i = 0; i < bytes.Length; i+=fragmentSize)
                 {
                     if(currentWindow == 4)
                     {   
@@ -176,9 +176,9 @@ namespace CustomProtocol.Net
                         await Task.Delay(2000);
                         currentWindow = 0;
                     }   
-                    bytes.Take(new Range(i, i+fragmentSize));
-                    CustomProtocolMessage message = new CustomProtocolMessage();
-                    message.SequenceNumber = seqNum;
+                  
+                    CustomProtocolMessage message = CreateFragment(bytes, seqNum, fragmentSize);
+                 
                     message.Id = id;
                     seqNum++;
                     if(i+fragmentSize > bytes.Length)
@@ -186,7 +186,7 @@ namespace CustomProtocol.Net
                         message.SetFlag(CustomProtocolFlag.Last, true);
                     }
                     
-                    message.Data = bytes.Take(new Range(i, i+fragmentSize)).ToArray();
+                   
                     await _connection.SendMessage(message);
 
                   
@@ -195,6 +195,22 @@ namespace CustomProtocol.Net
                 }
                 Console.WriteLine("Transporation ended");
             }
+        }
+        public CustomProtocolMessage CreateFragment(byte[] bytes, uint sequenceNumber, uint fragmentSize)
+        {
+            CustomProtocolMessage message = new CustomProtocolMessage();
+            message.SequenceNumber = sequenceNumber;
+            
+            
+            
+            int start =(int) (sequenceNumber*fragmentSize);
+            int end = (int)(start+fragmentSize);
+            if(end > bytes.Length)
+            {
+                message.SetFlag(CustomProtocolFlag.Last, true);
+            }
+            message.Data = bytes.Take(new Range(start, end)).ToArray();
+            return message;
         }
 
         public async Task Connect(ushort port, string address)
