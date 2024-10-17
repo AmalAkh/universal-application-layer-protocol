@@ -16,7 +16,7 @@ namespace CustomProtocol.Net
     {
        
 
-        List<CustomProtocolMessage> _messagePull = new List<CustomProtocolMessage>();
+        
 
 
         private Socket _sendingSocket;

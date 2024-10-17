@@ -26,6 +26,8 @@ namespace CustomProtocol.Net
         {
             get;
         }
+
+        private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         public CustomUdpClient()
         {
            
@@ -95,6 +97,38 @@ namespace CustomProtocol.Net
                         {
                             Console.WriteLine("New message:");
                             Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
+                        }else 
+                        {
+                            if(incomingMessage.Last)
+                            {
+                                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                                Console.WriteLine("ended");
+                                List<byte> defragmentedBytes = new List<byte>();
+                                foreach(CustomProtocolMessage msg in _fragmentedMessages[incomingMessage.Id])
+                                {
+                                    foreach(byte oneByte in msg.Data)
+                                    {
+                                        defragmentedBytes.Add(oneByte);
+                                    }
+                                }
+                                if(!incomingMessage.IsFile)
+                                {
+                                    Console.WriteLine("New message");
+                                    Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
+                                }   
+                            }else
+                            {
+                                if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
+                                {
+                                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+
+                                }else
+                                {
+                                    _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
+                                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+
+                                }
+                            }
                         }
                     }
                     else{
@@ -106,13 +140,51 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
-
-        public async Task SendTextMessage(string text, int fragmentSize = 40)
+        private int _windowSize = 4;
+        public async Task SendTextMessage(string text, int fragmentSize = 5)
         {
-            CustomProtocolMessage message = new CustomProtocolMessage();
-            message.SetFlag(CustomProtocolFlag.Last, true);
-            message.Data = Encoding.ASCII.GetBytes(text);
-            await _connection.SendMessage(message);
+            byte[] bytes = Encoding.ASCII.GetBytes(text);
+            UInt16 id = (UInt16)Random.Shared.Next(0,Int16.MaxValue);
+            UInt32 seqNum = 0;
+           
+            if(bytes.Length <= fragmentSize)
+            {
+                CustomProtocolMessage message = new CustomProtocolMessage();
+                
+                message.SetFlag(CustomProtocolFlag.Last, true);
+                message.Data = bytes;
+                await _connection.SendMessage(message);
+            }else
+            {
+             
+                int currentWindow = 0;
+                for(int i = 0; i < bytes.Length; i+=fragmentSize)
+                {
+                    if(currentWindow == 4)
+                    {   
+                        Console.WriteLine("Window was send");
+                        await Task.Delay(3000);
+                        currentWindow = 0;
+                    }   
+                    bytes.Take(new Range(i, i+fragmentSize));
+                    CustomProtocolMessage message = new CustomProtocolMessage();
+                    message.SequenceNumber = seqNum;
+                    message.Id = id;
+                    seqNum++;
+                    if(i+fragmentSize > bytes.Length)
+                    {
+                        message.SetFlag(CustomProtocolFlag.Last, true);
+                    }
+                    
+                    message.Data = bytes.Take(new Range(i, i+fragmentSize)).ToArray();
+                    await _connection.SendMessage(message);
+
+                  
+                    
+                    currentWindow++;
+                }
+                Console.WriteLine("Transporation ended");
+            }
         }
 
         public async Task Connect(ushort port, string address)
