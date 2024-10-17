@@ -3,6 +3,7 @@ using System.Net;
 using Timers = System.Timers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text;
 
 
 namespace CustomProtocol.Net
@@ -71,8 +72,6 @@ namespace CustomProtocol.Net
 
                     }else if(_connection.Status == ConnectionStatus.Unconnected &&  incomingMessage.Syn && !incomingMessage.Ack)
                     {
-                            
-                    
                         await _connection.AcceptConnection(new IPEndPoint(senderEndPoint.Address, BitConverter.ToInt16(incomingMessage.Data) ));
                     }else if(_connection.Status == ConnectionStatus.WaitingForIncomingConnectionAck && incomingMessage.Ack && !incomingMessage.Syn)
                     {
@@ -90,6 +89,13 @@ namespace CustomProtocol.Net
                     }else if(incomingMessage.Ping)
                     {
                         await _connection.SendPong();
+                    }else if(_connection.Status == ConnectionStatus.Connected)
+                    {
+                        if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
+                        {
+                            Console.WriteLine("New message:");
+                            Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
+                        }
                     }
                     else{
                         await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
@@ -101,14 +107,19 @@ namespace CustomProtocol.Net
             task.Start();
         }
 
-        
+        public async Task SendTextMessage(string text, int fragmentSize = 40)
+        {
+            CustomProtocolMessage message = new CustomProtocolMessage();
+            message.SetFlag(CustomProtocolFlag.Last, true);
+            message.Data = Encoding.ASCII.GetBytes(text);
+            await _connection.SendMessage(message);
+        }
 
         public async Task Connect(ushort port, string address)
         {
             
             await _connection.Connect(port, address);
-
-            
+        
         }
         public async Task Disconnect()
         {

@@ -167,7 +167,10 @@ namespace CustomProtocol.Net
             _pingPongCancellationTokenSource.Cancel();
             _unrespondedPingPongRequests = 0;
         }
-
+        public async Task SendMessage(CustomProtocolMessage message)
+        {
+            await _sendingSocket.SendToAsync(message.ToByteArray(), _currentEndPoint);
+        }
         public async Task HandleMessage(CustomProtocolMessage message, EndPoint senderEndPoint)
         {
 

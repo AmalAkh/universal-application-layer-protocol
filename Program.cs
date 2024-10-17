@@ -43,6 +43,11 @@ while(true)
       
         await udpServer.Connect(targetPort,targetIP);
 
+    }else if(command.StartsWith("send"))
+    {
+        Console.WriteLine("Enter message");
+        string text = Console.ReadLine();
+        await udpServer.SendTextMessage(text);
     }else if(command.StartsWith("disconnect"))
     {
         await udpServer.Disconnect();

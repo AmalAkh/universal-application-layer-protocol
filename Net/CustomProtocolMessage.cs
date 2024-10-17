@@ -11,7 +11,7 @@ namespace CustomProtocol.Net
     }
     public class CustomProtocolMessage
     {
-        public UInt32 SequenceNumber;
+        public UInt32 SequenceNumber = 0;
         public UInt16 Id;
         public bool[] Flags;
 
