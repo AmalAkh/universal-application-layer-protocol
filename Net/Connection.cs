@@ -175,7 +175,14 @@ namespace CustomProtocol.Net
         {
 
         }
+        public async Task MakeRepeatRequest(uint sequenceNumber)
+        {
+            CustomProtocolMessage synMessage = new CustomProtocolMessage();
+            synMessage.SequenceNumber = sequenceNumber;
+            synMessage.SetFlag(CustomProtocolFlag.Syn, true);
+            await _sendingSocket.SendToAsync(synMessage.ToByteArray(), _currentEndPoint);
 
+        }
         public async Task AcceptConnection(EndPoint senderEndPoint)
         {
             CustomProtocolMessage ackMessage = new CustomProtocolMessage();

@@ -48,7 +48,7 @@ namespace CustomProtocol.Net
 
             
         }
-       
+        
         protected void StartListening()
         {
            
@@ -93,52 +93,62 @@ namespace CustomProtocol.Net
                         await _connection.SendPong();
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
-                        if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
-                        {
-                            Console.WriteLine("New message:");
-                            Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
-                        }else 
-                        {
-                            if(incomingMessage.Last)
-                            {
-                                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-                                Console.WriteLine("ended");
-                                List<byte> defragmentedBytes = new List<byte>();
-                                foreach(CustomProtocolMessage msg in _fragmentedMessages[incomingMessage.Id])
-                                {
-                                    foreach(byte oneByte in msg.Data)
-                                    {
-                                        defragmentedBytes.Add(oneByte);
-                                    }
-                                }
-                                if(!incomingMessage.IsFile)
-                                {
-                                    Console.WriteLine("New message");
-                                    Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
-                                }   
-                            }else
-                            {
-                                if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
-                                {
-                                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-
-                                }else
-                                {
-                                    _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
-                                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-
-                                }
-                            }
-                        }
-                    }
-                    else{
-                        await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
+                        await HandleMessage(incomingMessage);
                     }
                     
 
                 }
             });
             task.Start();
+        }
+       
+        private async Task HandleMessage(CustomProtocolMessage incomingMessage)
+        {
+            if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
+            {
+                Console.WriteLine("New message:");
+                Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
+            }else 
+            {
+                if(incomingMessage.Last)
+                {
+                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                    AssembleFragments(incomingMessage.Id, false);
+                }else
+                {
+                    await AddToFragmentedMessage(incomingMessage);
+                }
+            }
+            
+        }
+        private async Task AddToFragmentedMessage(CustomProtocolMessage incomingMessage)
+        {
+            if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
+            {
+                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+
+            }else
+            {
+                _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
+                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+
+            }
+        }
+        private async void AssembleFragments(uint id, bool isFile = false)
+        {
+            List<byte> defragmentedBytes = new List<byte>();
+            foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
+            {
+                foreach(byte oneByte in msg.Data)
+                {
+                    defragmentedBytes.Add(oneByte);
+                }
+            }
+            if(!isFile)
+            {
+                Console.WriteLine("New message");
+                Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
+            }
         }
         private int _windowSize = 4;
         public async Task SendTextMessage(string text, int fragmentSize = 5)
@@ -163,7 +173,7 @@ namespace CustomProtocol.Net
                     if(currentWindow == 4)
                     {   
                         Console.WriteLine("Window was send");
-                        await Task.Delay(3000);
+                        await Task.Delay(2000);
                         currentWindow = 0;
                     }   
                     bytes.Take(new Range(i, i+fragmentSize));
