@@ -58,12 +58,43 @@ namespace CustomProtocol.Net
                     byte[] bytes = new byte[1500];//buffer
                     IPEndPoint endPoint = new IPEndPoint(IPAddress.None,0);
                     SocketReceiveFromResult receiveFromResult = await _listeningSocket.ReceiveFromAsync(bytes, endPoint);
-                    
+                    var senderEndPoint = receiveFromResult.RemoteEndPoint as IPEndPoint;
                     //Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
 
                     CustomProtocolMessage incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
+                    if(_connection.IsConnectionTimeout)
+                    {   
+                        await _connection.InterruptConnectionHandshake();
+                    
+                    }else if(_connection.IsConnectionInterrupted)
+                    {    await _connection.InterruptConnection();
 
-                    await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
+                    }else if(_connection.Status == ConnectionStatus.Unconnected &&  incomingMessage.Syn && !incomingMessage.Ack)
+                    {
+                            
+                    
+                        await _connection.AcceptConnection(new IPEndPoint(senderEndPoint.Address, BitConverter.ToInt16(incomingMessage.Data) ));
+                    }else if(_connection.Status == ConnectionStatus.WaitingForIncomingConnectionAck && incomingMessage.Ack && !incomingMessage.Syn)
+                    {
+                                                
+                        await _connection.EstablishConnection();
+                    }else if(_connection.Status == ConnectionStatus.WaitingForOutgoingConnectionAck && incomingMessage.Ack && incomingMessage.Syn)
+                    {
+                        await _connection.EstablishOutgoingConnection(new IPEndPoint(senderEndPoint.Address, BitConverter.ToInt16(incomingMessage.Data) ));
+                    }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Pong)
+                    {
+                        _connection.ReceivePong();
+                    }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Finish)
+                    {
+                        await _connection.AcceptDisconnection();
+                    }else if(incomingMessage.Ping)
+                    {
+                        await _connection.SendPong();
+                    }
+                    else{
+                        await _connection.HandleMessage(incomingMessage, receiveFromResult.RemoteEndPoint);
+                    }
+                    
 
                 }
             });
