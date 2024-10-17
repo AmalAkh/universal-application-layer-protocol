@@ -20,7 +20,7 @@ Console.Write("Enter port for listening:");
 ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
 Console.Write("Enter port for sending:");
 ushort sendingPort = Convert.ToUInt16(Console.ReadLine());
-UdpServer udpServer = new UdpServer();
+CustomUdpClient udpServer = new CustomUdpClient ();
 
 //udpServer.Start("127.0.0.1", 5050, 9911);
 udpServer.Start("127.0.0.1", listeningPort, sendingPort);

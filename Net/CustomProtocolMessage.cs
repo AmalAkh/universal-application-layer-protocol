@@ -31,7 +31,83 @@ namespace CustomProtocol.Net
             Data = new byte[1];
             FilenameOffset = 0;
         }
-    
+        public bool Ack
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Ack];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Ack] = value;
+            }
+        }
+        public bool Syn
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Syn];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Syn] = value;
+            }
+        }
+        public bool IsFile
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.File];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.File] = value;
+            }
+        }
+        public bool Finish
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Finish];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Finish] = value;
+            }
+        }
+        public bool Last
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Last];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Last] = value;
+            }
+        }
+        public bool Ping
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Ping];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Ping] = value;
+            }
+        }
+        public bool Pong
+        {
+            get
+            {
+                return Flags[(int)CustomProtocolFlag.Pong];
+            }
+            set
+            {
+                Flags[(int)CustomProtocolFlag.Pong] = value;
+            }
+        }
         public void SetFlag(CustomProtocolFlag flag, bool value)
         {
             Flags[Convert.ToInt16(flag)] = value;
@@ -41,10 +117,6 @@ namespace CustomProtocol.Net
         public byte[] ToByteArray()
         {
         
-            
-
-            
-
             //convert bools to bytes
             int power = 7;
             byte flagsByte = 0;
@@ -53,11 +125,6 @@ namespace CustomProtocol.Net
                 flagsByte += Convert.ToByte(Convert.ToByte(Math.Pow(2,power)) * (flag ? 1: 0));
                 power--;
             }
-
-
-           
-
-
            
             CheckSum = CRC16Implementation.Compute([..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data]);
 

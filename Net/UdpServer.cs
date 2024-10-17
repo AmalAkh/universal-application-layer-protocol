@@ -11,7 +11,7 @@ namespace CustomProtocol.Net
     {
         Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck
     }
-    public class UdpServer
+    public class CustomUdpClient
     {
        
 
@@ -25,7 +25,7 @@ namespace CustomProtocol.Net
         {
             get;
         }
-        public UdpServer()
+        public CustomUdpClient()
         {
            
         }
@@ -74,14 +74,14 @@ namespace CustomProtocol.Net
 
         public async Task Connect(ushort port, string address)
         {
-           
+            
             await _connection.Connect(port, address);
 
             
         }
         public async Task Disconnect()
         {
-            Console.WriteLine("Disconnecting.....");
+            Console.WriteLine("Disconnecting...");
             await _connection.Disconnect();
             Console.WriteLine("Disconnected");
 

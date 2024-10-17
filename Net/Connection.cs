@@ -189,7 +189,6 @@ namespace CustomProtocol.Net
             }
             else if(_status == ConnectionStatus.Connected && message.Flags[(int)CustomProtocolFlag.Pong])
             {
-         
                 _unrespondedPingPongRequests-=1;
             }else if(_status == ConnectionStatus.Connected && message.Flags[(int)CustomProtocolFlag.Finish])
             {
@@ -228,7 +227,7 @@ namespace CustomProtocol.Net
             _currentEndPoint = senderEndPoint;
             _status = ConnectionStatus.WaitingForIncomingConnectionAck;
             ackMessage.Data = BitConverter.GetBytes((_listeningSocket.LocalEndPoint as IPEndPoint).Port);
-            int c = await _sendingSocket.SendToAsync(ackMessage.ToByteArray(), _currentEndPoint);
+            await _sendingSocket.SendToAsync(ackMessage.ToByteArray(), _currentEndPoint);
              
             StartConnectionTimer();
             
