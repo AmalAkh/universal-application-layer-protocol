@@ -4,6 +4,7 @@ using Timers = System.Timers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using System.Linq;
 
 
 namespace CustomProtocol.Net
@@ -116,12 +117,12 @@ namespace CustomProtocol.Net
                     AssembleFragments(incomingMessage.Id, false);
                 }else
                 {
-                    await AddToFragmentedMessage(incomingMessage);
+                    await AddToFragmentedMessages(incomingMessage);
                 }
             }
             
         }
-        private async Task AddToFragmentedMessage(CustomProtocolMessage incomingMessage)
+        private async Task AddToFragmentedMessages(CustomProtocolMessage incomingMessage)
         {
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
@@ -137,6 +138,7 @@ namespace CustomProtocol.Net
         private async void AssembleFragments(uint id, bool isFile = false)
         {
             List<byte> defragmentedBytes = new List<byte>();
+            _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber);
             foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
             {
                 foreach(byte oneByte in msg.Data)
@@ -150,13 +152,14 @@ namespace CustomProtocol.Net
                 Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
             }
         }
+        private Dictionary<UInt16, List<uint>> _unacknowledgedMessages = new Dictionary<UInt16, List<uint>>();
         private int _windowSize = 4;
         public async Task SendTextMessage(string text, uint fragmentSize = 5)
         {
             byte[] bytes = Encoding.ASCII.GetBytes(text);
             UInt16 id = (UInt16)Random.Shared.Next(0,Int16.MaxValue);
             UInt32 seqNum = 0;
-           
+            _unacknowledgedMessages.Add(id, new List<uint>());
             if(bytes.Length <= fragmentSize)
             {
                 CustomProtocolMessage message = new CustomProtocolMessage();
@@ -173,12 +176,14 @@ namespace CustomProtocol.Net
                     if(currentWindow == 4)
                     {   
                         Console.WriteLine("Window was send");
-                        await Task.Delay(2000);
+                        
+
+                        
                         currentWindow = 0;
                     }   
                   
                     CustomProtocolMessage message = CreateFragment(bytes, seqNum, fragmentSize);
-                 
+                    _unacknowledgedMessages[id].Add(seqNum);
                     message.Id = id;
                     seqNum++;
                     if(i+fragmentSize > bytes.Length)
@@ -186,7 +191,7 @@ namespace CustomProtocol.Net
                         message.SetFlag(CustomProtocolFlag.Last, true);
                     }
                     
-                   
+                    
                     await _connection.SendMessage(message);
 
                   
