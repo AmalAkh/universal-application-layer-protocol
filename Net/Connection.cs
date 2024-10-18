@@ -175,11 +175,21 @@ namespace CustomProtocol.Net
         {
 
         }
-        public async Task MakeRepeatRequest(uint sequenceNumber)
+        public async Task MakeRepeatRequest(uint sequenceNumber, UInt16 id)
         {
             CustomProtocolMessage synMessage = new CustomProtocolMessage();
             synMessage.SequenceNumber = sequenceNumber;
+            synMessage.Id = id;
             synMessage.SetFlag(CustomProtocolFlag.Syn, true);
+            await _sendingSocket.SendToAsync(synMessage.ToByteArray(), _currentEndPoint);
+
+        }
+        public async Task SendFragmentAcknoledgement(UInt16 id,uint sequenceNumber)
+        {
+            CustomProtocolMessage synMessage = new CustomProtocolMessage();
+            synMessage.SequenceNumber = sequenceNumber;
+            synMessage.Id = id;
+            synMessage.SetFlag(CustomProtocolFlag.Ack, true);
             await _sendingSocket.SendToAsync(synMessage.ToByteArray(), _currentEndPoint);
 
         }
