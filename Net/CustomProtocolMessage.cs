@@ -2,6 +2,7 @@
 
 
 using System.Collections;
+using CustomProtocol.Net.Exceptions;
 
 namespace CustomProtocol.Net
 {
@@ -156,7 +157,7 @@ namespace CustomProtocol.Net
             message.Data = bytes.Take(new Range(9, bytes.Length -2)).ToArray<byte>();
             if(CRC16Implementation.Compute(bytes) != 0)
             {
-                throw new Exception("Checksum");
+                throw new DamagedMessageException();
             }
             message.CheckSum =  BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, bytes.Length-2,2));
            
