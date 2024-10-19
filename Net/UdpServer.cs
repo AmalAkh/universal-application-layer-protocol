@@ -121,7 +121,9 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
-       
+        private Dictionary<UInt16, UInt32> _overrallMessagesCount = new Dictionary<UInt16, UInt32>();
+        
+        
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
             if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
@@ -132,12 +134,17 @@ namespace CustomProtocol.Net
             {
                 if(incomingMessage.Last)
                 {
+                    _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber+1;
                     _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-                    await Task.Delay(2000);
-                    AssembleFragments(incomingMessage.Id, false);
+
+                    
                 }else
                 {
                     await AddToFragmentedMessages(incomingMessage);
+                }
+                if(_overrallMessagesCount[incomingMessage.Id] != 0 && _overrallMessagesCount[incomingMessage.Id] == _fragmentedMessages[incomingMessage.Id].Count)
+                {
+                    AssembleFragments(incomingMessage.Id, false);
                 }
             }
             await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
@@ -145,13 +152,16 @@ namespace CustomProtocol.Net
         }
         private async Task AddToFragmentedMessages(CustomProtocolMessage incomingMessage)
         {
+            
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                
 
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
+                _overrallMessagesCount.Add(incomingMessage.Id, 0);
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
 
             }
