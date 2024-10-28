@@ -8,15 +8,17 @@ Console.WriteLine("Write commands");
 
 
 
+var msg = new CustomProtocolMessage();
+
+var msg2 = CustomProtocolMessage.FromBytes(msg.ToByteArray());
 
 
 
 
 
 
-
-Console.Write("Enter address for listening:");
-string address = Console.ReadLine();
+//Console.Write("Enter address for listening:");
+//string address = Console.ReadLine();
 Console.Write("Enter port for listening:");
 ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
 Console.Write("Enter port for sending:");
@@ -24,8 +26,8 @@ ushort sendingPort = Convert.ToUInt16(Console.ReadLine());
 CustomUdpClient udpServer = new CustomUdpClient ();
 
 //udpServer.Start("127.0.0.1", 5050, 9911);
-//udpServer.Start("127.0.0.1", listeningPort, sendingPort);
-udpServer.Start(address, listeningPort, sendingPort);
+udpServer.Start("127.0.0.1", listeningPort, sendingPort);
+//udpServer.Start(address, listeningPort, sendingPort);
 
 
 while(true)
@@ -49,7 +51,7 @@ while(true)
     {
         Console.WriteLine("Enter message");
         string text = Console.ReadLine();
-        await udpServer.SendTextMessage(text, fragmentSize:500);
+        await udpServer.SendTextMessage(text, fragmentSize:10);
     }else if(command.StartsWith("disconnect"))
     {
         await udpServer.Disconnect();

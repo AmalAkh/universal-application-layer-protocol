@@ -180,7 +180,7 @@ namespace CustomProtocol.Net
         {
 
         }
-        public async Task MakeRepeatRequest(uint sequenceNumber, UInt16 id)
+        public async Task MakeRepeatRequest(UInt16 sequenceNumber, UInt16 id)
         {
             CustomProtocolMessage synMessage = new CustomProtocolMessage();
             synMessage.SequenceNumber = sequenceNumber;
@@ -189,7 +189,7 @@ namespace CustomProtocol.Net
             await _sendingSocket.SendToAsync(synMessage.ToByteArray(), _currentEndPoint);
 
         }
-        public async Task SendFragmentAcknoledgement(UInt16 id,uint sequenceNumber)
+        public async Task SendFragmentAcknoledgement(UInt16 id,UInt16 sequenceNumber)
         {
             CustomProtocolMessage synMessage = new CustomProtocolMessage();
             synMessage.SequenceNumber = sequenceNumber;

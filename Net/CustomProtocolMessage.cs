@@ -12,7 +12,7 @@ namespace CustomProtocol.Net
     }
     public class CustomProtocolMessage
     {
-        public UInt32 SequenceNumber = 0;
+        public UInt16 SequenceNumber = 0;
         public UInt16 Id;
         public bool[] Flags;
 
@@ -141,10 +141,10 @@ namespace CustomProtocol.Net
             
             CustomProtocolMessage message = new CustomProtocolMessage();
            
-            message.SequenceNumber = BitConverter.ToUInt32(new ReadOnlySpan<byte>(bytes, 0,4));
-            message.Id = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 4,2));
+            message.SequenceNumber = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 0,2));
+            message.Id = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 2,2));
             
-            BitArray bitArray = new BitArray(new byte[]{bytes[6]});
+            BitArray bitArray = new BitArray(new byte[]{bytes[4]});
             bitArray.CopyTo(message.Flags, 0);
             Array.Reverse(message.Flags);
 
@@ -154,7 +154,7 @@ namespace CustomProtocol.Net
 
             
 
-            message.Data = bytes.Take(new Range(9, bytes.Length -2)).ToArray<byte>();
+            message.Data = bytes.Take(new Range(7, bytes.Length -2)).ToArray<byte>();
             if(CRC16Implementation.Compute(bytes) != 0)
             {
                 throw new DamagedMessageException();

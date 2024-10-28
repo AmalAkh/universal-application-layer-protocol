@@ -121,7 +121,7 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
-        private Dictionary<UInt16, UInt32> _overrallMessagesCount = new Dictionary<UInt16, UInt32>();
+        private Dictionary<UInt16, UInt16> _overrallMessagesCount = new Dictionary<UInt16, UInt16>();
         
         
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
@@ -134,7 +134,7 @@ namespace CustomProtocol.Net
             {
                 if(incomingMessage.Last)
                 {
-                    _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber+1;
+                    _overrallMessagesCount[incomingMessage.Id] = (UInt16)(incomingMessage.SequenceNumber+1);
                     _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
 
                     
@@ -148,7 +148,7 @@ namespace CustomProtocol.Net
                 }
             }
             await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
-            Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber} acknowledged");
+          //  Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber} acknowledged");
         }
         private async Task AddToFragmentedMessages(CustomProtocolMessage incomingMessage)
         {
@@ -179,7 +179,7 @@ namespace CustomProtocol.Net
             }
             if(!isFile)
             {
-                Console.WriteLine("New message");
+                //Console.WriteLine("New message");
                 Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
             }
         }
@@ -191,7 +191,7 @@ namespace CustomProtocol.Net
         {
             byte[] bytes = Encoding.ASCII.GetBytes(text);
             UInt16 id = (UInt16)Random.Shared.Next(0,Int16.MaxValue);
-            UInt32 seqNum = 0;
+            UInt16 seqNum = 0;
             _unAcknowledgedMessages.Add(id, new List<uint>());
             if(bytes.Length <= fragmentSize)
             {
@@ -200,6 +200,7 @@ namespace CustomProtocol.Net
                 message.SetFlag(CustomProtocolFlag.Last, true);
                 message.Data = bytes;
                 await _connection.SendMessage(message);
+                Console.WriteLine("Message sent");
             }else
             {   
 
@@ -216,6 +217,7 @@ namespace CustomProtocol.Net
                
                         message.Id = id;
                         seqNum++;
+                       
                         if(i+fragmentSize > bytes.Length)
                         {
                             message.SetFlag(CustomProtocolFlag.Last, true);
@@ -265,7 +267,7 @@ namespace CustomProtocol.Net
                     await WaitForFirstInWindow(fragmentsToSend,id, (UInt32)currentWindowStart+1);
                     await WaitForFirstInWindow(fragmentsToSend,id, (UInt32)currentWindowStart+2);
                     await WaitForFirstInWindow(fragmentsToSend,id, (UInt32)currentWindowStart+3);
-                    Console.WriteLine("Transporation ended");
+                    //Console.WriteLine("Transporation ended");
                 });
                 
                 
@@ -295,7 +297,7 @@ namespace CustomProtocol.Net
                     {
                         currentTime = 0;
                         await _connection.SendMessage(fragments[(int)seqNum]);
-                        Console.WriteLine($"Fragment {seqNum} was resend");
+                        //Console.WriteLine($"Fragment {seqNum} was resend");
                         Console.WriteLine(Encoding.ASCII.GetString(fragments[(int)seqNum].Data));
 
                     }
@@ -304,7 +306,7 @@ namespace CustomProtocol.Net
             });
 
         }
-        public CustomProtocolMessage CreateFragment(byte[] bytes, uint sequenceNumber, uint fragmentSize)
+        public CustomProtocolMessage CreateFragment(byte[] bytes, UInt16 sequenceNumber, uint fragmentSize)
         {
             CustomProtocolMessage message = new CustomProtocolMessage();
             message.SequenceNumber = sequenceNumber;
