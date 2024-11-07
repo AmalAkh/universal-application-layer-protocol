@@ -22,7 +22,7 @@ namespace CustomProtocol.Net
 
 
         public  byte[] Data;
-        public int InternalSequenceNum;// is not actually a part of a protocol, used for sequencing recived fragments;
+        public UInt64 InternalSequenceNum;// is not actually a part of a protocol, used for sequencing recived fragments;
 
         public UInt16 CheckSum;
 

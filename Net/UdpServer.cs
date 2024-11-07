@@ -32,6 +32,7 @@ namespace CustomProtocol.Net
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         private Dictionary<uint, List<CustomProtocolMessage>> _bufferedFragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
 
+        FragmentManager _fragmentManager = new FragmentManager();
         public CustomUdpClient()
         {
            
@@ -136,89 +137,23 @@ namespace CustomProtocol.Net
             {
                 Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
               
-
+                _fragmentManager.AddFragment(incomingMessage);
                 if(incomingMessage.Last)
                 {
-                    _overrallMessagesCount[incomingMessage.Id] = (UInt16)(incomingMessage.SequenceNumber+1);
-                    _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-
-                    
-                }else if(_fragmentedMessages.ContainsKey(incomingMessage.Id)  && _fragmentedMessages[incomingMessage.Id].Count == UInt16.MaxValue)
-                {
-                    AddToFragmentedMessages(incomingMessage);
-                  
-                    _fragmentedMessages[incomingMessage.Id] = _fragmentedMessages[incomingMessage.Id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
-                    if(!_bufferedFragmentedMessages.ContainsKey(incomingMessage.Id))
-                    {
-                        
-                     
-                        _bufferedFragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
-                       
-                    }
-                    foreach(var fragmentMsg in _fragmentedMessages[incomingMessage.Id])
-                    {
-                        fragmentMsg.InternalSequenceNum = fragmentMsg.SequenceNumber+ 20* (int)(_bufferedFragmentedMessages[incomingMessage.Id].Count/20);
-                        _bufferedFragmentedMessages[incomingMessage.Id].Add(fragmentMsg);
-                    }
-                    _fragmentedMessages[incomingMessage.Id].Clear();
-                }else
-                {
-                    AddToFragmentedMessages(incomingMessage);
+                    Console.WriteLine("Last fragment");
                 }
-                if(_overrallMessagesCount[incomingMessage.Id] != 0 && _overrallMessagesCount[incomingMessage.Id] == _fragmentedMessages[incomingMessage.Id].Count)
+                if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
                 {
-                    AssembleFragments(incomingMessage.Id, false);
+                    Console.WriteLine("New message:");
+                    Console.WriteLine(_fragmentManager.AssembleFragmentsAsText(incomingMessage.Id));
+                    _fragmentManager.ClearMessages(incomingMessage.Id);
                 }
             }
             await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
-          //  Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber} acknowledged");
+        
         }
-        private void AddToFragmentedMessages(CustomProtocolMessage incomingMessage)
-        {
-            
-            if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
-            {
-                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-                
-
-            }else
-            {
-                _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
-                _overrallMessagesCount.Add(incomingMessage.Id, 0);
-                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
-
-            }
-        }
-        private async void AssembleFragments(uint id, bool isFile = false)
-        {
-            List<byte> defragmentedBytes = new List<byte>();
-            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
-            
-            if(_bufferedFragmentedMessages.ContainsKey(id))
-            {
-                
-                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList())
-                {
-                    foreach(byte oneByte in msg.Data)
-                    {
-                      
-                        defragmentedBytes.Add(oneByte);
-                    }
-                }
-            }
-            foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
-            {
-                foreach(byte oneByte in msg.Data)
-                {
-                    defragmentedBytes.Add(oneByte);
-                }
-            }
-            if(!isFile)
-            {
-                Console.WriteLine("New message:");
-                Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
-            }
-        }
+        
+        
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
         private int _windowSize = 4;
     
@@ -226,7 +161,7 @@ namespace CustomProtocol.Net
         public async Task SendTextMessage(string text, uint fragmentSize = 5)
         {
             byte[] bytes = Encoding.ASCII.GetBytes(text);
-            UInt16 id = (UInt16)Random.Shared.Next(0,Int16.MaxValue);
+            UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
             UInt16 seqNum = 0;
             _unAcknowledgedMessages.Add(id, new List<uint>());
             if(bytes.Length <= fragmentSize)
@@ -254,9 +189,6 @@ namespace CustomProtocol.Net
                         CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
                         message.SequenceNumber = seqNum;
                         message.Id = id;
-                     
-                
-               
 
                         fragmentsToSend[currentFragmentListIndex].Add(message);
 
@@ -291,11 +223,14 @@ namespace CustomProtocol.Net
         {
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
-            for(int i = currentWindowStart; i <= currentWindowEnd; i++)
+            for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                 Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
-              
+                if(currentFragmentsPortion[i].Last)
+                {
+                    Console.WriteLine("Last fragment");
+                }
                 await _connection.SendMessage(currentFragmentsPortion[i]);
                 
             }
@@ -310,7 +245,10 @@ namespace CustomProtocol.Net
                 
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[currentWindowEnd].SequenceNumber);
               
-
+                if(currentFragmentsPortion[currentWindowEnd].Last)
+                {
+                    Console.WriteLine("Last fragment");
+                }
                 await _connection.SendMessage(currentFragmentsPortion[currentWindowEnd], true);
                
                 
