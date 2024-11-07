@@ -143,7 +143,7 @@ namespace CustomProtocol.Net
                     _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
 
                     
-                }else if(incomingMessage.SequenceNumber == 20)
+                }else if(_fragmentedMessages.ContainsKey(incomingMessage.Id)  && _fragmentedMessages[incomingMessage.Id].Count == UInt16.MaxValue)
                 {
                     AddToFragmentedMessages(incomingMessage);
                   
@@ -260,7 +260,7 @@ namespace CustomProtocol.Net
 
                         fragmentsToSend[currentFragmentListIndex].Add(message);
 
-                        if(seqNum == 20)
+                        if(seqNum == UInt16.MaxValue)
                         {
                             fragmentsToSend.Add(new List<CustomProtocolMessage>());
                             
