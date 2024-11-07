@@ -91,7 +91,49 @@ namespace CustomProtocol.Net
             return Encoding.ASCII.GetString(defragmentedBytes.ToArray());
             
         }
+        public List<List<CustomProtocolMessage>> CreateFragments(byte[] bytes, UInt16 id,uint fragmentSize=4)
+        {
+            List<List<CustomProtocolMessage>> fragmentsToSend = new List<List<CustomProtocolMessage>>();
+            UInt16 seqNum = 0;
+            int currentFragmentListIndex = 0;
+            fragmentsToSend.Add(new List<CustomProtocolMessage>());
+            for(ushort i = 0; i < bytes.Length; i+=(ushort)fragmentSize)
+            {   
+                
+                
+                CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
+                message.SequenceNumber = seqNum;
+                message.Id = id;
 
+                fragmentsToSend[currentFragmentListIndex].Add(message);
+
+                if(seqNum == UInt16.MaxValue)
+                {
+                    fragmentsToSend.Add(new List<CustomProtocolMessage>());
+                    
+                    currentFragmentListIndex+=1;
+                    seqNum = 0;
+                }else
+                {
+                    seqNum++;
+                }
+
+            }
+            return fragmentsToSend;
+        }
+        public CustomProtocolMessage CreateFragment(byte[] bytes, UInt16 start, uint fragmentSize)
+        {
+            CustomProtocolMessage message = new CustomProtocolMessage();
+            
+            int end = (int)(start+fragmentSize);
+        
+            if(end > bytes.Length)
+            {
+                message.SetFlag(CustomProtocolFlag.Last, true);
+            }
+            message.Data = bytes.Take(new Range(start, end)).ToArray();
+            return message;
+        }
         public void ClearMessages(UInt16 id)
         {
             _bufferedFragmentedMessages.Remove(id);

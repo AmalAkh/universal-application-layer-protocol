@@ -268,26 +268,24 @@ namespace CustomProtocol.Net
                 return;
             }
             int overralTime = 0;
-            int currentTime = 0;
+         
             await Task.Run(async()=>
             {
                 while(true)
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(250);
                     if(!_unAcknowledgedMessages[id].Contains(seqNum))
                     {
                         return;
                     }
-                    currentTime+=500;
-                    overralTime+=500;
                     
-                    if(currentTime > 500)
-                    {
-                        currentTime = 0;
-                        await _connection.SendMessage(fragments[(int)seqNum]);
+                    overralTime+=250;
+                    
+                   
+                    await _connection.SendMessage(fragments[(int)seqNum]);
                        
 
-                    }
+                    
                     
                 }
             });
@@ -297,10 +295,6 @@ namespace CustomProtocol.Net
         {
             CustomProtocolMessage message = new CustomProtocolMessage();
             
-            
-            
-            
-        
             int end = (int)(start+fragmentSize);
         
             if(end > bytes.Length)
