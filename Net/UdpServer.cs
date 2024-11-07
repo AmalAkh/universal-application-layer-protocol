@@ -67,7 +67,7 @@ namespace CustomProtocol.Net
                     
                     SocketReceiveFromResult receiveFromResult = await _listeningSocket.ReceiveFromAsync(bytes, endPoint);
                     var senderEndPoint = receiveFromResult.RemoteEndPoint as IPEndPoint;
-                    //Console.WriteLine($"Received - {receiveFromResult.ReceivedBytes}");
+                    
 
                     CustomProtocolMessage incomingMessage = new CustomProtocolMessage();
                     try
@@ -75,7 +75,7 @@ namespace CustomProtocol.Net
                         incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
                     }catch(DamagedMessageException e)
                     {
-                        Console.WriteLine("Fragment damaged");
+                        //Console.WriteLine("Fragment damaged");
                         continue;
                     }
                     if(_connection.IsConnectionTimeout)
@@ -106,7 +106,7 @@ namespace CustomProtocol.Net
                     {
                         if(_unAcknowledgedMessages.ContainsKey(incomingMessage.Id))
                         {
-                            //Console.WriteLine($"Send fragment #{incomingMessage.SequenceNumber} acknowledged");
+                          
 
                             _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
                         }
@@ -134,8 +134,8 @@ namespace CustomProtocol.Net
                 Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
             }else 
             {
-                Console.WriteLine(incomingMessage.SequenceNumber);
-                Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
+                Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
+              
 
                 if(incomingMessage.Last)
                 {
@@ -146,7 +146,7 @@ namespace CustomProtocol.Net
                 }else if(incomingMessage.SequenceNumber == 20)
                 {
                     AddToFragmentedMessages(incomingMessage);
-                    Console.WriteLine("added");
+                  
                     _fragmentedMessages[incomingMessage.Id] = _fragmentedMessages[incomingMessage.Id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
                     if(!_bufferedFragmentedMessages.ContainsKey(incomingMessage.Id))
                     {
@@ -201,7 +201,7 @@ namespace CustomProtocol.Net
                 {
                     foreach(byte oneByte in msg.Data)
                     {
-                      //  Console.WriteLine(Encoding.ASCII.GetString(msg.Data));
+                      
                         defragmentedBytes.Add(oneByte);
                     }
                 }
@@ -210,14 +210,12 @@ namespace CustomProtocol.Net
             {
                 foreach(byte oneByte in msg.Data)
                 {
-                   // Console.WriteLine(Encoding.ASCII.GetString(msg.Data));
-
                     defragmentedBytes.Add(oneByte);
                 }
             }
             if(!isFile)
             {
-                //Console.WriteLine("New message");
+                Console.WriteLine("New message:");
                 Console.WriteLine(Encoding.ASCII.GetString(defragmentedBytes.ToArray()));
             }
         }
@@ -251,19 +249,14 @@ namespace CustomProtocol.Net
                     fragmentsToSend.Add(new List<CustomProtocolMessage>());
                     for(ushort i = 0; i < bytes.Length; i+=(ushort)fragmentSize)
                     {   
-                        Console.WriteLine(i);   
+                       
                         
                         CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
                         message.SequenceNumber = seqNum;
                         message.Id = id;
                      
-                        Console.WriteLine(Encoding.ASCII.GetString(message.Data));
-                       
-                        if(message.Last)
-                        {
-                            Console.WriteLine("last fragment");
-                        }
-                        //Console.WriteLine(Encoding.ASCII.GetString(message.Data));
+                
+               
 
                         fragmentsToSend[currentFragmentListIndex].Add(message);
 
@@ -280,46 +273,15 @@ namespace CustomProtocol.Net
 
                     }
                     currentFragmentListIndex = 0;
-                    /*for(int i = currentWindowStart; i <= currentWindowEnd; i++)
-                    {
-                        _unAcknowledgedMessages[id].Add(fragmentsToSend[currentFragmentListIndex][i].SequenceNumber);
-                        Console.WriteLine(Encoding.ASCII.GetString(fragmentsToSend[currentFragmentListIndex][i].Data));
-                        
-                        await _connection.SendMessage(fragmentsToSend[currentFragmentListIndex][i]);
-                        //Console.WriteLine(Encoding.ASCII.GetString(fragmentsToSend[i].Data));
-                    }*/
                     
-                    //Console.WriteLine("first Window send");
-                   /* while(currentWindowEnd < fragmentsToSend[currentFragmentListIndex].Count-1)
-                    {
-                      
-                           
-                        await WaitForFirstInWindow(fragmentsToSend[currentFragmentListIndex],id, (UInt32)currentWindowStart);
-                        currentWindowStart+=1;
-                        currentWindowEnd+=1;
-                        
-                        _unAcknowledgedMessages[id].Add(fragmentsToSend[currentFragmentListIndex][currentWindowEnd].SequenceNumber);
-                        await _connection.SendMessage(fragmentsToSend[currentFragmentListIndex][currentWindowEnd], true);
-                        Console.WriteLine(Encoding.ASCII.GetString(fragmentsToSend[currentFragmentListIndex][currentWindowEnd].Data));
-                        
-                        if(currentWindowEnd == 20)
-                        {
-                            currentFragmentListIndex+=1;
-                        }
-
-                    }*/
                     for(int i = 0; i < fragmentsToSend.Count; i++)
                     {
-                       Console.WriteLine($"sending portion {i}");
+                       Console.WriteLine($"Sending portion {i}");
                        await StartSendingFragments(fragmentsToSend[i], id);
                        currentFragmentListIndex++;
                     }
-                    /*await WaitForFirstInWindow(fragmentsToSend[currentFragmentListIndex-1],id, (UInt32)currentWindowStart);
-
-                    await WaitForFirstInWindow(fragmentsToSend[currentFragmentListIndex-1],id, (UInt32)currentWindowStart+1);
-                    await WaitForFirstInWindow(fragmentsToSend[currentFragmentListIndex-1],id, (UInt32)currentWindowStart+2);
-                    await WaitForFirstInWindow(fragmentsToSend[currentFragmentListIndex-1],id, (UInt32)currentWindowStart+3);*/
-                    Console.WriteLine("Transporation ended");
+                   
+                    Console.WriteLine("Message sent");
                 });
                 
                 
@@ -332,10 +294,10 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd; i++)
             {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
+                Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
               
-                Console.WriteLine(currentFragmentsPortion[i].SequenceNumber);
                 await _connection.SendMessage(currentFragmentsPortion[i]);
-                Console.WriteLine(Encoding.ASCII.GetString(currentFragmentsPortion[i].Data));
+                
             }
             while(currentWindowEnd < currentFragmentsPortion.Count-1)
             {
@@ -347,12 +309,12 @@ namespace CustomProtocol.Net
               
                 
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[currentWindowEnd].SequenceNumber);
-                Console.WriteLine(currentFragmentsPortion[currentWindowEnd].SequenceNumber);
+              
 
                 await _connection.SendMessage(currentFragmentsPortion[currentWindowEnd], true);
-                Console.WriteLine(Encoding.ASCII.GetString(currentFragmentsPortion[currentWindowEnd].Data));
+               
                 
-                
+                Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[currentWindowEnd].SequenceNumber}");
 
             }
             await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
@@ -385,8 +347,7 @@ namespace CustomProtocol.Net
                     {
                         currentTime = 0;
                         await _connection.SendMessage(fragments[(int)seqNum]);
-                        //Console.WriteLine($"Fragment {seqNum} was resend");
-                       // Console.WriteLine(Encoding.ASCII.GetString(fragments[(int)seqNum].Data));
+                       
 
                     }
                     
