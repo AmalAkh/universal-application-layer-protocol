@@ -170,7 +170,7 @@ namespace CustomProtocol.Net
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
             byte[] bytes =message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.8)
+            if(err && Random.Shared.NextDouble() > 0.75)
             {
                 bytes[0] = 12;
             }

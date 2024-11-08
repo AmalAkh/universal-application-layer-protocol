@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using NUnit.Framework.Interfaces;
 
@@ -17,8 +18,22 @@ namespace CustomProtocol.Net
         }
         public bool CheckDeliveryCompletion(UInt16 id)
         {
-            
+            //Console.WriteLine(_fragmentedMessages[id].Count);
+            //Console.WriteLine(_overrallMessagesCount[id]);
+            if(_overrallMessagesCount[id] != 0)
+            {
+               /* Console.WriteLine("");
+                Console.WriteLine("Missing:");
+                for(int i = 0; i < _overrallMessagesCount[id];i++)
+                {
+                   if(!_fragmentedMessages[id].Exists((msg)=>msg.SequenceNumber == i))
+                   {
+                    Console.Write($"#{i} ");
+                   }
+                }
+                Console.WriteLine("");*/
 
+            }
             return _overrallMessagesCount[id] != 0 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count;
         }
         public bool CheckSequenceNumberExcess(UInt16 id)
@@ -30,6 +45,10 @@ namespace CustomProtocol.Net
             
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
+                if(_fragmentedMessages[incomingMessage.Id].Exists((msg)=>msg.SequenceNumber == incomingMessage.SequenceNumber))
+                {
+                    return;
+                }
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);   
             }else
             {
@@ -138,6 +157,7 @@ namespace CustomProtocol.Net
         {
             _bufferedFragmentedMessages.Remove(id);
             _fragmentedMessages.Remove(id);
+            _overrallMessagesCount.Remove(id);
         }
 
                 
