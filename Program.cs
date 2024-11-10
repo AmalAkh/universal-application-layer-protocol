@@ -51,7 +51,7 @@ while(true)
     {
         Console.WriteLine("Enter message");
         string text = Console.ReadLine();
-        await udpServer.SendTextMessage(text, fragmentSize:10);
+        await udpServer.SendTextMessage(text, fragmentSize:1);
     }else if(command.StartsWith("disconnect"))
     {
         await udpServer.Disconnect();

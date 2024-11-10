@@ -157,10 +157,10 @@ namespace CustomProtocol.Net
         
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
-        private int _windowSize = 4;
+        private int _windowSize = UInt16.MaxValue;
     
        
-        public async Task SendTextMessage(string text, uint fragmentSize = 5)
+        public async Task SendTextMessage(string text, uint fragmentSize = 4)
         {
             byte[] bytes = Encoding.ASCII.GetBytes(text);
             UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
@@ -234,7 +234,7 @@ namespace CustomProtocol.Net
                 
 
                 await _connection.SendMessage(currentFragmentsPortion[i]);
-                _fragmensSent+=1;
+               
                 
             }
             while(currentWindowEnd < currentFragmentsPortion.Count-1)
@@ -285,9 +285,7 @@ namespace CustomProtocol.Net
             await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+3);*/
             
         }
-        int _rttThreshold = 100;
-        int _averageRTT = 0;
-        int _fragmensSent = 0;
+        int _rttThreshold = 200;
         private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
             if(!_unAcknowledgedMessages[id].Contains(seqNum))
@@ -301,7 +299,7 @@ namespace CustomProtocol.Net
                 return;
             }
             int overralTime = 0;
-            int delay = 50;
+            int delay = 25;
 
             await Task.Run(async()=>
             {
@@ -314,8 +312,8 @@ namespace CustomProtocol.Net
                         {
                             _windowSize--;
                             Console.WriteLine("Window decreased");
-                            delay+=10;
-                        }else if(_windowSize < 10 && overralTime < _rttThreshold && _isWindowChangable)
+                            //delay+=10;
+                        }else if( overralTime < _rttThreshold && _isWindowChangable)
                         {
                             _windowSize++;
                             if(delay >50)
