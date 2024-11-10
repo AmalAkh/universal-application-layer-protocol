@@ -217,6 +217,7 @@ namespace CustomProtocol.Net
                     }
                    
                     Console.WriteLine("Message sent");
+                    
                 });
                 
                 

@@ -37,24 +37,26 @@ while(true)
     if(command.StartsWith("connect"))
     {
 
-        string[] splitedCommand = command.Split();
-        string targetIP = splitedCommand[1];
-
-        Dictionary<string,string> cmdArgs = CLIArgsParser.Parse(splitedCommand, 2);
-       
-        ushort targetPort = Convert.ToUInt16(CLIArgsParser.GetArg(cmdArgs, "-p", "5050"));
-        
+        string[] splitedCommand = command.Split(" ");
+        string[] targetIPAndPort = splitedCommand[1].Split(":");
       
-        await udpServer.Connect(targetPort,targetIP);
+        await udpServer.Connect(Convert.ToUInt16(targetIPAndPort[1]),targetIPAndPort[0]);
 
-    }else if(command.StartsWith("send"))
+    }else if(command.StartsWith("sendtext"))
     {
-        Console.WriteLine("Enter message");
+        Dictionary<string, string> options = CLIArgsParser.Parse(command);
+        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
+        Console.WriteLine(fragmentSize);
+        Console.Write("Enter message:");
         string text = Console.ReadLine();
-        await udpServer.SendTextMessage(text, fragmentSize:1);
+        Console.WriteLine(text);
+        await udpServer.SendTextMessage(text, fragmentSize);
     }else if(command.StartsWith("disconnect"))
     {
         await udpServer.Disconnect();
+    }else
+    {
+        Console.WriteLine("Unknown command");
     }
 
 }
