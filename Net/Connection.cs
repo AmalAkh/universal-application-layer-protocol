@@ -230,7 +230,7 @@ namespace CustomProtocol.Net
         }
         public void ReceivePong()
         {
-            _unrespondedPingPongRequests-=1;
+            _unrespondedPingPongRequests = 0;
         }
         public async Task SendPong()
         {

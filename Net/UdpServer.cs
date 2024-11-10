@@ -30,9 +30,8 @@ namespace CustomProtocol.Net
             get;
         }
 
-        private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
-        private Dictionary<uint, List<CustomProtocolMessage>> _bufferedFragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
-
+        
+        
         FragmentManager _fragmentManager = new FragmentManager();
         public CustomUdpClient()
         {
@@ -148,7 +147,7 @@ namespace CustomProtocol.Net
                     _fragmentManager.ClearMessages(incomingMessage.Id);
                 }
             }
-            await Task.Delay(Random.Shared.Next(100,3000));
+           // await Task.Delay(Random.Shared.Next(100,3000));
            // Console.WriteLine($"Acknowledged #{incomingMessage.SequenceNumber}");
             await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             
@@ -157,7 +156,7 @@ namespace CustomProtocol.Net
         
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
-        private int _windowSize = UInt16.MaxValue;
+        private int _windowSize = UInt16.MaxValue/2;
     
        
         public async Task SendTextMessage(string text, uint fragmentSize = 4)
@@ -213,6 +212,7 @@ namespace CustomProtocol.Net
                     {
                        Console.WriteLine($"Sending portion {i}");
                        await StartSendingFragments(fragmentsToSend[i], id);
+                       _isWindowChangable = true;
                        currentFragmentListIndex++;
                     }
                    
@@ -275,8 +275,8 @@ namespace CustomProtocol.Net
                 Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[currentWindowEnd].SequenceNumber}");*/
 
             }
-            _isWindowChangable = false;
-            for(int i = 0; i < _windowSize;i++)
+           
+            for(int i = 0; i < currentWindowEnd;i++)
             {
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)(currentWindowStart+i));
             }
@@ -291,12 +291,11 @@ namespace CustomProtocol.Net
         {
             if(!_unAcknowledgedMessages[id].Contains(seqNum))
             {
-                if(_isWindowChangable)
-                {
-                    _windowSize++;
                 
-                    Console.WriteLine("Window increased");
-                }
+                _windowSize++;
+                
+                Console.WriteLine("Window increased");
+                
                 return;
             }
             int overralTime = 0;
@@ -314,13 +313,10 @@ namespace CustomProtocol.Net
                             _windowSize--;
                             Console.WriteLine("Window decreased");
                             //delay+=10;
-                        }else if( overralTime < _rttThreshold && _isWindowChangable)
+                        }else if( overralTime < _rttThreshold)
                         {
                             _windowSize++;
-                            if(delay >50)
-                            {
-                               // delay-=10;
-                            }
+                            
                             Console.WriteLine("Window increased");
                         }
                         
