@@ -7,6 +7,8 @@ namespace CustomProtocol.Net
 {
     public class FragmentManager
     {
+        private Dictionary<uint, HashSet<uint>> _receivedSequenceNumbers = new Dictionary<uint, HashSet<uint>>();
+        
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         private Dictionary<uint, List<CustomProtocolMessage>> _bufferedFragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
 
@@ -45,7 +47,7 @@ namespace CustomProtocol.Net
             
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
-                if(_fragmentedMessages[incomingMessage.Id].Exists((msg)=>msg.SequenceNumber == incomingMessage.SequenceNumber))
+                if(!_receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber))
                 {
                     return;
                 }
@@ -55,7 +57,10 @@ namespace CustomProtocol.Net
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
                 _overrallMessagesCount.Add(incomingMessage.Id, 0);
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
+                _receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber);
             }
+            
             if(CheckSequenceNumberExcess(incomingMessage.Id))
             {
                 BufferMessages(incomingMessage.Id);
@@ -67,18 +72,17 @@ namespace CustomProtocol.Net
         }
         private void BufferMessages(UInt16 id)
         {
-             _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
+            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
             if(!_bufferedFragmentedMessages.ContainsKey(id))
             {
-       
                 _bufferedFragmentedMessages.Add(id, new List<CustomProtocolMessage>());
-                
             }
             foreach(var fragmentMsg in _fragmentedMessages[id])
             {
                 fragmentMsg.InternalSequenceNum = (ulong)(fragmentMsg.SequenceNumber + UInt16.MaxValue * (int)(_bufferedFragmentedMessages[id].Count/UInt16.MaxValue));
                 _bufferedFragmentedMessages[id].Add(fragmentMsg);
             }
+            _receivedSequenceNumbers[id].Clear();
             _fragmentedMessages[id].Clear();
         }
         public string AssembleFragmentsAsText(uint id)
@@ -135,11 +139,13 @@ namespace CustomProtocol.Net
                     defragmentedBytes.Add(oneByte);
                 }
             } 
-            string filename = Encoding.ASCII.GetString(defragmentedBytes.Take(_fragmentedMessages[id][0].FilenameOffset).ToArray());  
+            int filenameOffset = _fragmentedMessages[id].Where((msg,index)=>index==0).Select((msg)=>msg.FilenameOffset).FirstOrDefault();
+            string filename = Encoding.ASCII.GetString(defragmentedBytes.Take(filenameOffset).ToArray());  
             
             using(FileStream fileStream = new FileStream(Path.Combine("./received_files/", filename), FileMode.Create, FileAccess.Write))
             {
-                await fileStream.WriteAsync(defragmentedBytes.Take(new Range(_fragmentedMessages[id][0].FilenameOffset, defragmentedBytes.Count)).ToArray());
+               
+                await fileStream.WriteAsync(defragmentedBytes.Take(new Range(filenameOffset, defragmentedBytes.Count)).ToArray());
             }
             
             Console.WriteLine(filename);
@@ -194,6 +200,8 @@ namespace CustomProtocol.Net
             _bufferedFragmentedMessages.Remove(id);
             _fragmentedMessages.Remove(id);
             _overrallMessagesCount.Remove(id);
+            _receivedSequenceNumbers[id].Clear();
+
         }
 
                 

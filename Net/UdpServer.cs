@@ -156,8 +156,7 @@ namespace CustomProtocol.Net
                 }
             }
             
-           // await Task.Delay(Random.Shared.Next(100,3000));
-           // Console.WriteLine($"Acknowledged #{incomingMessage.SequenceNumber}");
+          
             await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             
         
@@ -302,6 +301,8 @@ namespace CustomProtocol.Net
             {
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)(currentWindowStart+i));
             }
+
+            _unAcknowledgedMessages[id].Clear();
             /*
              await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+1);
             await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+2);
@@ -311,17 +312,21 @@ namespace CustomProtocol.Net
         int _rttThreshold = 200;
         private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
+            int delay = 100;
             if(!_unAcknowledgedMessages[id].Contains(seqNum))
             {
                 
                 _windowSize++;
-                
+                if(delay > 100)
+                {
+                    delay-=10;
+                }
                 //Console.WriteLine("Window increased");
                 
                 return;
             }
             int overralTime = 0;
-            int delay = 100;
+           
 
             await Task.Run(async()=>
             {
@@ -334,11 +339,14 @@ namespace CustomProtocol.Net
                         {
                             _windowSize--;
                             //Console.WriteLine("Window decreased");
-                            //delay+=10;
+                            delay+=50;
                         }else if( overralTime < _rttThreshold)
                         {
                             _windowSize++;
-                            
+                            if(delay > 100)
+                            {
+                                delay-=10;
+                            }
                             //Console.WriteLine("Window increased");
                         }
                         
