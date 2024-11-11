@@ -9,7 +9,8 @@ Console.WriteLine("Write commands");
 
 
 var msg = new CustomProtocolMessage();
-
+msg.FilenameOffset = 14;
+Console.WriteLine(msg.ToByteArray().Length);
 var msg2 = CustomProtocolMessage.FromBytes(msg.ToByteArray());
 
 
@@ -50,8 +51,18 @@ while(true)
         Console.Write("Enter message:");
         string text = Console.ReadLine();
         Console.WriteLine(text);
-        await udpServer.SendTextMessage(text, fragmentSize);
-    }else if(command.StartsWith("disconnect"))
+        await udpServer.SendText(text, fragmentSize);
+    }else if(command.StartsWith("sendfile"))
+    {
+
+        Dictionary<string, string> options = CLIArgsParser.Parse(command, 2);
+        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 100;
+        Console.WriteLine(fragmentSize);
+
+   
+        await udpServer.SendFile(command.Split(" ")[1], fragmentSize);
+    }
+    else if(command.StartsWith("disconnect"))
     {
         await udpServer.Disconnect();
     }else

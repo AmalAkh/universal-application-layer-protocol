@@ -149,6 +149,7 @@ namespace CustomProtocol.Net
             Array.Reverse(message.Flags);
 
          
+            message.FilenameOffset = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 5,2));
 
 
 

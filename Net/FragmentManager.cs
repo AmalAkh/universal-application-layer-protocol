@@ -110,6 +110,42 @@ namespace CustomProtocol.Net
             return Encoding.ASCII.GetString(defragmentedBytes.ToArray());
             
         }
+
+        public async Task<string> SaveFragmentsAsFile(uint id)
+        {
+            List<byte> defragmentedBytes = new List<byte>();
+            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
+            
+            if(_bufferedFragmentedMessages.ContainsKey(id))
+            {
+                
+                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList())
+                {
+                    foreach(byte oneByte in msg.Data)
+                    {
+                      
+                        defragmentedBytes.Add(oneByte);
+                    }
+                }
+            }
+            foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
+            {
+                foreach(byte oneByte in msg.Data)
+                {
+                    defragmentedBytes.Add(oneByte);
+                }
+            } 
+            string filename = Encoding.ASCII.GetString(defragmentedBytes.Take(_fragmentedMessages[id][0].FilenameOffset).ToArray());  
+            
+            using(FileStream fileStream = new FileStream(Path.Combine("./received_files/", filename), FileMode.Create, FileAccess.Write))
+            {
+                await fileStream.WriteAsync(defragmentedBytes.Take(new Range(_fragmentedMessages[id][0].FilenameOffset, defragmentedBytes.Count)).ToArray());
+            }
+            
+            Console.WriteLine(filename);
+            return filename;
+            
+        }
         public List<List<CustomProtocolMessage>> CreateFragments(byte[] bytes, UInt16 id,uint fragmentSize=4)
         {
             List<List<CustomProtocolMessage>> fragmentsToSend = new List<List<CustomProtocolMessage>>();
