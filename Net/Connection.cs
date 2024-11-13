@@ -172,7 +172,7 @@ namespace CustomProtocol.Net
             byte[] bytes =message.ToByteArray();
             if(err && Random.Shared.NextDouble() > 0.75)
             {
-                bytes[0] = 12;
+                //bytes[0] = 12;
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }

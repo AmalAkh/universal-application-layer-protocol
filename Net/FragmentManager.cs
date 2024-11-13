@@ -20,11 +20,11 @@ namespace CustomProtocol.Net
         }
         public bool CheckDeliveryCompletion(UInt16 id)
         {
-            //Console.WriteLine(_fragmentedMessages[id].Count);
-            //Console.WriteLine(_overrallMessagesCount[id]);
+            Console.WriteLine(_fragmentedMessages[id].Count);
+            Console.WriteLine(_overrallMessagesCount[id]);
             if(_overrallMessagesCount[id] != 0)
             {
-               /* Console.WriteLine("");
+                Console.WriteLine("");
                 Console.WriteLine("Missing:");
                 for(int i = 0; i < _overrallMessagesCount[id];i++)
                 {
@@ -33,7 +33,7 @@ namespace CustomProtocol.Net
                     Console.Write($"#{i} ");
                    }
                 }
-                Console.WriteLine("");*/
+                Console.WriteLine("");
 
             }
             return _overrallMessagesCount[id] != 0 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count;

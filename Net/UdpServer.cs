@@ -129,6 +129,7 @@ namespace CustomProtocol.Net
         
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
+            _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
             {
                 Console.WriteLine("New message:");
@@ -157,14 +158,14 @@ namespace CustomProtocol.Net
             }
             
           
-            await _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
+            
             
         
         }
         
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
-        private int _windowSize = UInt16.MaxValue/2;
+        
         public async Task SendFile(string filePath,uint fragmentSize = 4)
         {
             string filename = Path.GetFileName(filePath);
@@ -233,7 +234,7 @@ namespace CustomProtocol.Net
                     {
                        Console.WriteLine($"Sending portion {i}");
                        await StartSendingFragments(fragmentsToSend[i], id);
-                       _isWindowChangable = true;
+                      
                        currentFragmentListIndex++;
                     }
                    
@@ -245,6 +246,7 @@ namespace CustomProtocol.Net
             }
         }
         private bool _isWindowChangable = true;
+        private int _windowSize = 200;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
             int currentWindowStart = 0;
@@ -252,7 +254,7 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
-                //Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
+               // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
 
                 await _connection.SendMessage(currentFragmentsPortion[i]);
@@ -274,10 +276,10 @@ namespace CustomProtocol.Net
             
                     if(currentFragmentsPortion[j].Last)
                     {
-                      //  Console.WriteLine("Last fragment");
+                        Console.WriteLine("Last fragment");
                     }
                     await _connection.SendMessage(currentFragmentsPortion[j], true);
-                   //Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[j].SequenceNumber}");
+                  // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[j].SequenceNumber}");
 
                 }
                     
@@ -312,17 +314,10 @@ namespace CustomProtocol.Net
         int _rttThreshold = 200;
         private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
-            int delay = 100;
+            int delay = 50;
             if(!_unAcknowledgedMessages[id].Contains(seqNum))
             {
-                
-                _windowSize++;
-                if(delay > 100)
-                {
-                    delay-=10;
-                }
-                //Console.WriteLine("Window increased");
-                
+             
                 return;
             }
             int overralTime = 0;
@@ -330,23 +325,23 @@ namespace CustomProtocol.Net
 
             await Task.Run(async()=>
             {
+                int c = 0;
                 while(true)
                 {
                     await Task.Delay(delay);
+                    c++;
                     if(!_unAcknowledgedMessages[id].Contains(seqNum))
                     {
                         if(_windowSize > 1 && overralTime > _rttThreshold)
                         {
-                            _windowSize--;
-                            //Console.WriteLine("Window decreased");
-                            delay+=50;
-                        }else if( overralTime < _rttThreshold)
+                            _windowSize/=2;
+                            Console.WriteLine($"Window decreased {_windowSize}");
+                            
+                          
+                        }else if( overralTime <= _rttThreshold)
                         {
                             _windowSize++;
-                            if(delay > 100)
-                            {
-                                delay-=10;
-                            }
+                           
                             //Console.WriteLine("Window increased");
                         }
                         
@@ -355,9 +350,16 @@ namespace CustomProtocol.Net
                     
                     
                     overralTime+=delay;
-                    Console.WriteLine($"Resedning fragment #{seqNum}");
-                    await _connection.SendMessage(fragments[(int)seqNum]);
-                       
+                    if(c >= 50)
+                    {
+                        Console.WriteLine($"Resedning fragment #{seqNum}");
+                        await _connection.SendMessage(fragments[(int)seqNum]);
+                      
+                        c = 0;
+                        
+
+                    }
+                   
 
                     
                     

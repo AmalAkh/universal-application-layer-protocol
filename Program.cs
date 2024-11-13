@@ -56,7 +56,7 @@ while(true)
     {
 
         Dictionary<string, string> options = CLIArgsParser.Parse(command, 2);
-        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
+        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 10;
         Console.WriteLine(fragmentSize);
 
    
