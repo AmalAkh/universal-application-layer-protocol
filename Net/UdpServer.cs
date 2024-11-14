@@ -110,10 +110,7 @@ namespace CustomProtocol.Net
                         if(_unAcknowledgedMessages.ContainsKey(incomingMessage.Id))
                         {
 
-                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
-                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
-                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
-                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+                            _unAcknowledgedMessages[incomingMessage.Id].RemoveAll((seqNum)=>seqNum==incomingMessage.SequenceNumber);
 
                         }
                     }else if(incomingMessage.Ping)
