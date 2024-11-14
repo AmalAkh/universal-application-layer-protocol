@@ -76,7 +76,7 @@ namespace CustomProtocol.Net
                         incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
                     }catch(DamagedMessageException e)
                     {
-                     //   Console.WriteLine("Fragment damaged");
+                        Console.WriteLine("Fragment damaged");
                         continue;
                     }
                     if(_connection.IsConnectionTimeout)
@@ -109,7 +109,12 @@ namespace CustomProtocol.Net
                         {
                           
 
+
                             _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+                            _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+
                         }
                     }else if(incomingMessage.Ping)
                     {
@@ -350,7 +355,7 @@ namespace CustomProtocol.Net
                     
                     
                     overralTime+=delay;
-                    if(c >= 50)
+                    if(c >= 10)
                     {
                         Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
