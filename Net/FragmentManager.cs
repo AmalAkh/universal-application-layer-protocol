@@ -79,7 +79,7 @@ namespace CustomProtocol.Net
             }
             foreach(var fragmentMsg in _fragmentedMessages[id])
             {
-                fragmentMsg.InternalSequenceNum = (ulong)(fragmentMsg.SequenceNumber + UInt16.MaxValue * (int)(_bufferedFragmentedMessages[id].Count/UInt16.MaxValue));
+                fragmentMsg.InternalSequenceNum = (ulong)(fragmentMsg.SequenceNumber + UInt16.MaxValue * _bufferedFragmentedMessages[id].Count);
                 _bufferedFragmentedMessages[id].Add(fragmentMsg);
             }
             _receivedSequenceNumbers[id].Clear();
@@ -93,7 +93,7 @@ namespace CustomProtocol.Net
             if(_bufferedFragmentedMessages.ContainsKey(id))
             {
                 
-                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList())
+                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id])
                 {
                     foreach(byte oneByte in msg.Data)
                     {
@@ -123,7 +123,7 @@ namespace CustomProtocol.Net
             if(_bufferedFragmentedMessages.ContainsKey(id))
             {
                 
-                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList())
+                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id])
                 {
                     foreach(byte oneByte in msg.Data)
                     {

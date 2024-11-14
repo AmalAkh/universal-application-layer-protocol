@@ -248,13 +248,16 @@ namespace CustomProtocol.Net
             }
         }
         private bool _isWindowChangable = true;
-        private int _windowSize = UInt16.MaxValue/2;
+        private int _windowSize = 100;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
+            HashSet<int> sentMessage = new HashSet<int>();
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
+
+                sentMessage.Add(i);
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
@@ -263,7 +266,7 @@ namespace CustomProtocol.Net
                
                 
             }
-            while(currentWindowEnd < currentFragmentsPortion.Count-1)
+            while(currentWindowEnd < currentFragmentsPortion.Count)
             {
                   
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
@@ -274,6 +277,12 @@ namespace CustomProtocol.Net
         
                 for(int j = previousWindowEnd+1; j <= currentWindowEnd && j < currentFragmentsPortion.Count;j++)
                 {
+                    if(!sentMessage.Add(j))
+                    {
+                        continue;
+                    }
+                    Console.WriteLine(j);
+
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[j].SequenceNumber);
             
                     if(currentFragmentsPortion[j].Last)
@@ -354,7 +363,7 @@ namespace CustomProtocol.Net
                     overralTime+=delay;
                     if(c >= 10)
                     {
-                        Console.WriteLine($"Resedning fragment #{seqNum}");
+                      //  Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
                       
                         c = 0;
