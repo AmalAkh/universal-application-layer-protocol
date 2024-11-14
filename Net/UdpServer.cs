@@ -42,9 +42,11 @@ namespace CustomProtocol.Net
         {
             _listeningSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
             _listeningSocket.Bind(new IPEndPoint(IPAddress.Parse(address), listeningPort));
-
+            _listeningSocket.ReceiveBufferSize = (Int16.MaxValue/2)*10;
             _sendingSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
             _sendingSocket.Bind(new IPEndPoint(IPAddress.Parse(address), sendingPort));
+            _sendingSocket.SendBufferSize = (Int16.MaxValue/2)*10;
+
             _connection = new Connection(_listeningSocket, _sendingSocket);
             StartListening();
             Console.WriteLine($"Listening on address {address} on port {listeningPort}");
@@ -107,8 +109,6 @@ namespace CustomProtocol.Net
                     {
                         if(_unAcknowledgedMessages.ContainsKey(incomingMessage.Id))
                         {
-                          
-
 
                             _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
                             _unAcknowledgedMessages[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
@@ -251,7 +251,7 @@ namespace CustomProtocol.Net
             }
         }
         private bool _isWindowChangable = true;
-        private int _windowSize = 200;
+        private int _windowSize = UInt16.MaxValue/2;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
             int currentWindowStart = 0;
