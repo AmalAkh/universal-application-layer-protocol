@@ -26,6 +26,14 @@ if(address == "t1")
 }else if(address == "t2"){
     udpServer.Start("127.0.0.1", 5656,6565);
 
+}
+else if(address == "t3"){
+    udpServer.Start("192.168.1.40", 10080,10080);
+
+}else if(address == "t4")
+{
+    udpServer.Start("192.168.1.68", 5050,8080);
+    
 }else
 {
     Console.Write("Enter port for listening:");
