@@ -43,22 +43,22 @@ namespace CustomProtocol.Net
         {
             return _fragmentedMessages.ContainsKey(id)  && _receivedSequenceNumbers[id].Count == UInt16.MaxValue+1;
         }
-        public void AddFragment(CustomProtocolMessage incomingMessage)
+        public bool AddFragment(CustomProtocolMessage incomingMessage)
         {
             incomingMessage.InternalSequenceNum = _fragmentedMessages.Count;
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber))
                 {
-                    return;
+                    return false;
                 }
-                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);   
+                
                 
 
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
-                _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                
                 _overrallMessagesCount.Add(incomingMessage.Id, 0);
                 
                 _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
@@ -66,15 +66,17 @@ namespace CustomProtocol.Net
                 
                 
             }
-            
+            _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
             if(CheckSequenceNumberExcess(incomingMessage.Id))
             {
+                
                 _receivedSequenceNumbers[incomingMessage.Id].Clear();
             }
             if(incomingMessage.Last)
             {
                 _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber;
             }
+            return true;
         }
         
         public string AssembleFragmentsAsText(uint id)

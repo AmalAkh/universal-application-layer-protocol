@@ -49,6 +49,8 @@ namespace CustomProtocol.Net
 
             _connection = new Connection(_listeningSocket, _sendingSocket);
             StartListening();
+        
+
             Console.WriteLine($"Listening on address {address} on port {listeningPort}");
             Console.WriteLine($"Sending using address {address} on port {sendingPort}");
 
@@ -126,7 +128,6 @@ namespace CustomProtocol.Net
             });
             task.Start();
         }
-        private Dictionary<UInt16, UInt32> _overrallMessagesCount = new Dictionary<UInt16, UInt32>();
         
         
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
@@ -138,9 +139,12 @@ namespace CustomProtocol.Net
                 Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
             }else 
             {
-                Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
+               // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
               
-                _fragmentManager.AddFragment(incomingMessage);
+                if(!_fragmentManager.AddFragment(incomingMessage))
+                {
+                    return;
+                }
                 
 
                 if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
@@ -227,9 +231,7 @@ namespace CustomProtocol.Net
 
                     }
                     fragmentsToSend[currentFragmentListIndex][fragmentsToSend[currentFragmentListIndex].Count-1].Last = true;
-                    Console.WriteLine(fragmentsToSend.Count);
-                    Console.WriteLine(fragmentSize);
-
+               
                     currentFragmentListIndex = 0;
                     
                     for(int i = 0; i < fragmentsToSend.Count; i++)
@@ -247,8 +249,8 @@ namespace CustomProtocol.Net
                 
             }
         }
-        private bool _isWindowChangable = true;
-        private int _windowSize = 100;
+       
+        private int _windowSize = 500;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
           
@@ -280,7 +282,6 @@ namespace CustomProtocol.Net
                 for(;previousWindowEnd <= currentWindowEnd && previousWindowEnd < currentFragmentsPortion.Count;previousWindowEnd++)
                 {
                  
-                 
 
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
             
@@ -306,13 +307,10 @@ namespace CustomProtocol.Net
             }
 
             _unAcknowledgedMessages[id].Clear();
-            /*
-             await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+1);
-            await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+2);
-            await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart+3);*/
+         
             
         }
-        int _rttThreshold = 200;
+        int _rttThreshold = 350;
         private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
             int delay = 50;
@@ -336,7 +334,7 @@ namespace CustomProtocol.Net
                         if(_windowSize > 1 && overralTime > _rttThreshold)
                         {
                             _windowSize/=2;
-                            Console.WriteLine($"Window decreased {_windowSize}");
+                           // Console.WriteLine($"Window decreased {_windowSize}");
                             
                           
                         }else if( overralTime <= _rttThreshold)
@@ -353,7 +351,7 @@ namespace CustomProtocol.Net
                     overralTime+=delay;
                     if(c >= 10)
                     {
-                      //  Console.WriteLine($"Resedning fragment #{seqNum}");
+                        Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
                       
                         c = 0;
