@@ -10,8 +10,7 @@ namespace CustomProtocol.Net
         private Dictionary<uint, HashSet<uint>> _receivedSequenceNumbers = new Dictionary<uint, HashSet<uint>>();
         
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
-        private Dictionary<uint, List<CustomProtocolMessage>> _bufferedFragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
-
+        
         private Dictionary<UInt16, UInt32> _overrallMessagesCount = new Dictionary<UInt16, UInt32>();
     
         public FragmentManager()
@@ -20,8 +19,10 @@ namespace CustomProtocol.Net
         }
         public bool CheckDeliveryCompletion(UInt16 id)
         {
-            Console.WriteLine(_fragmentedMessages[id].Count);
-            Console.WriteLine(_overrallMessagesCount[id]);
+          //  Console.WriteLine(_fragmentedMessages[id].Count);
+           // Console.WriteLine(_overrallMessagesCount[id]);
+           // Console.WriteLine(_receivedSequenceNumbers[id].Count);
+          
             if(_overrallMessagesCount[id] != 0)
             {
                 Console.WriteLine("");
@@ -36,15 +37,15 @@ namespace CustomProtocol.Net
                 Console.WriteLine("");
 
             }
-            return _overrallMessagesCount[id] != 0 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count;
+            return _overrallMessagesCount[id] != 0 && _overrallMessagesCount[id]+1 == _receivedSequenceNumbers[id].Count;
         }
         public bool CheckSequenceNumberExcess(UInt16 id)
         {
-            return _fragmentedMessages.ContainsKey(id)  && _fragmentedMessages[id].Count == UInt16.MaxValue + 1;
+            return _fragmentedMessages.ContainsKey(id)  && _receivedSequenceNumbers[id].Count == UInt16.MaxValue+1;
         }
         public void AddFragment(CustomProtocolMessage incomingMessage)
         {
-            
+            incomingMessage.InternalSequenceNum = _fragmentedMessages.Count;
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber))
@@ -52,56 +53,36 @@ namespace CustomProtocol.Net
                     return;
                 }
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);   
+                
+
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
-                _overrallMessagesCount.Add(incomingMessage.Id, 0);
                 _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
+                _overrallMessagesCount.Add(incomingMessage.Id, 0);
+                
                 _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
                 _receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber);
+                
+                
             }
             
             if(CheckSequenceNumberExcess(incomingMessage.Id))
             {
-                BufferMessages(incomingMessage.Id);
+                _receivedSequenceNumbers[incomingMessage.Id].Clear();
             }
             if(incomingMessage.Last)
             {
-                _overrallMessagesCount[incomingMessage.Id] = (UInt16)(incomingMessage.SequenceNumber+1);
+                _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber;
             }
         }
-        private void BufferMessages(UInt16 id)
-        {
-            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
-            if(!_bufferedFragmentedMessages.ContainsKey(id))
-            {
-                _bufferedFragmentedMessages.Add(id, new List<CustomProtocolMessage>());
-            }
-            foreach(var fragmentMsg in _fragmentedMessages[id])
-            {
-                fragmentMsg.InternalSequenceNum = (ulong)(fragmentMsg.SequenceNumber + UInt16.MaxValue * _bufferedFragmentedMessages[id].Count);
-                _bufferedFragmentedMessages[id].Add(fragmentMsg);
-            }
-            _receivedSequenceNumbers[id].Clear();
-            _fragmentedMessages[id].Clear();
-        }
+        
         public string AssembleFragmentsAsText(uint id)
         {
             List<byte> defragmentedBytes = new List<byte>();
-            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
+            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList();
             
-            if(_bufferedFragmentedMessages.ContainsKey(id))
-            {
-                
-                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id])
-                {
-                    foreach(byte oneByte in msg.Data)
-                    {
-                      
-                        defragmentedBytes.Add(oneByte);
-                    }
-                }
-            }
+          
             foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
             {
                 foreach(byte oneByte in msg.Data)
@@ -118,20 +99,9 @@ namespace CustomProtocol.Net
         public async Task<string> SaveFragmentsAsFile(uint id)
         {
             List<byte> defragmentedBytes = new List<byte>();
-            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.SequenceNumber).ToList();
+            _fragmentedMessages[id] = _fragmentedMessages[id].OrderBy((fragment)=>fragment.InternalSequenceNum).ToList();
             
-            if(_bufferedFragmentedMessages.ContainsKey(id))
-            {
-                
-                foreach(CustomProtocolMessage msg in _bufferedFragmentedMessages[id])
-                {
-                    foreach(byte oneByte in msg.Data)
-                    {
-                      
-                        defragmentedBytes.Add(oneByte);
-                    }
-                }
-            }
+          
             foreach(CustomProtocolMessage msg in _fragmentedMessages[id])
             {
                 foreach(byte oneByte in msg.Data)
@@ -197,7 +167,7 @@ namespace CustomProtocol.Net
         }
         public void ClearMessages(UInt16 id)
         {
-            _bufferedFragmentedMessages.Remove(id);
+            
             _fragmentedMessages.Remove(id);
             _overrallMessagesCount.Remove(id);
             _receivedSequenceNumbers[id].Clear();
