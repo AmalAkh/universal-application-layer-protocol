@@ -251,13 +251,13 @@ namespace CustomProtocol.Net
         private int _windowSize = 100;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
-            HashSet<int> sentMessage = new HashSet<int>();
+          
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-                sentMessage.Add(i);
+               
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
@@ -271,16 +271,14 @@ namespace CustomProtocol.Net
                   
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
                 currentWindowStart+=1;
-                int previousWindowEnd = currentWindowEnd;
+                
+                int previousWindowEnd = Int32.Max(currentWindowEnd, currentWindowEnd);
                 currentWindowEnd = currentWindowStart+_windowSize-1;
               
         
                 for(int j = previousWindowEnd+1; j <= currentWindowEnd && j < currentFragmentsPortion.Count;j++)
                 {
-                    if(!sentMessage.Add(j))
-                    {
-                        continue;
-                    }
+                 
                     Console.WriteLine(j);
 
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[j].SequenceNumber);
