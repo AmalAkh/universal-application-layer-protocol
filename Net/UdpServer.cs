@@ -254,6 +254,7 @@ namespace CustomProtocol.Net
           
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
+            int previousWindowEnd = currentWindowStart+_windowSize-1;
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
@@ -272,22 +273,22 @@ namespace CustomProtocol.Net
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
                 currentWindowStart+=1;
                 
-                int previousWindowEnd = Int32.Max(currentWindowEnd, currentWindowEnd);
+                previousWindowEnd = Int32.Max(currentWindowEnd, previousWindowEnd);
                 currentWindowEnd = currentWindowStart+_windowSize-1;
               
         
-                for(int j = previousWindowEnd+1; j <= currentWindowEnd && j < currentFragmentsPortion.Count;j++)
+                for(;previousWindowEnd <= currentWindowEnd && previousWindowEnd < currentFragmentsPortion.Count;previousWindowEnd++)
                 {
                  
-                    Console.WriteLine(j);
+                 
 
-                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[j].SequenceNumber);
+                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
             
-                    if(currentFragmentsPortion[j].Last)
+                    if(currentFragmentsPortion[previousWindowEnd].Last)
                     {
                         Console.WriteLine("Last fragment");
                     }
-                    await _connection.SendMessage(currentFragmentsPortion[j], true);
+                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], true);
                   // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[j].SequenceNumber}");
 
                 }
@@ -295,16 +296,7 @@ namespace CustomProtocol.Net
                 
                   
                 
-                /*_unAcknowledgedMessages[id].Add(currentFragmentsPortion[currentWindowEnd].SequenceNumber);
-              
-                if(currentFragmentsPortion[currentWindowEnd].Last)
-                {
-                    Console.WriteLine("Last fragment");
-                }
-                await _connection.SendMessage(currentFragmentsPortion[currentWindowEnd], true);
-               
                 
-                Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[currentWindowEnd].SequenceNumber}");*/
 
             }
            
