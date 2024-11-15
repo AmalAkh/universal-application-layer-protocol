@@ -17,18 +17,28 @@ var msg2 = CustomProtocolMessage.FromBytes(msg.ToByteArray());
 
 
 
-
-//Console.Write("Enter address for listening:");
-//string address = Console.ReadLine();
-Console.Write("Enter port for listening:");
-ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
-Console.Write("Enter port for sending:");
-ushort sendingPort = Convert.ToUInt16(Console.ReadLine());
 CustomUdpClient udpServer = new CustomUdpClient ();
+Console.Write("Enter address for listening:");
+string address = Console.ReadLine();
+if(address == "t1")
+{
+    udpServer.Start("127.0.0.1", 5050,8080);
+}else if(address == "t2"){
+    udpServer.Start("127.0.0.1", 5656,6565);
+
+}else
+{
+    Console.Write("Enter port for listening:");
+    ushort listeningPort = Convert.ToUInt16(Console.ReadLine());
+    Console.Write("Enter port for sending:");
+    ushort sendingPort = Convert.ToUInt16(Console.ReadLine());
+  
+    udpServer.Start(address, listeningPort, sendingPort);
+}
 
 //udpServer.Start("127.0.0.1", 5050, 9911);
-udpServer.Start("127.0.0.1", listeningPort, sendingPort);
-//udpServer.Start(address, listeningPort, sendingPort);
+//udpServer.Start("127.0.0.1", listeningPort, sendingPort);
+
 
 
 while(true)
