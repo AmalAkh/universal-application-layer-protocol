@@ -175,6 +175,12 @@ namespace CustomProtocol.Net
             _receivedSequenceNumbers[id].Clear();
 
         }
+        public void ClearAllMessages()
+        {
+            _fragmentedMessages.Clear();
+            _overrallMessagesCount.Clear();
+            _receivedSequenceNumbers.Clear();
+        }
 
                 
     }

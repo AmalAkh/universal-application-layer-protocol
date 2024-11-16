@@ -4,6 +4,7 @@ using Timers = System.Timers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using NUnit.Framework.Internal.Execution;
 
 
 namespace CustomProtocol.Net
@@ -15,6 +16,12 @@ namespace CustomProtocol.Net
     public class Connection
     {
        
+        public delegate void ConnectionEventHandler();
+
+        public event ConnectionEventHandler Interrupted;
+        public event ConnectionEventHandler Disconnected;
+
+
 
         
 
@@ -127,10 +134,18 @@ namespace CustomProtocol.Net
         {
             if(Status == ConnectionStatus.Connected)
             {
+               
                 CustomProtocolMessage disconnectionMessage = new CustomProtocolMessage();
                 disconnectionMessage.SetFlag(CustomProtocolFlag.Finish, true);
                 await _sendingSocket.SendToAsync(disconnectionMessage.ToByteArray(), _currentEndPoint);
+
+                StopPingPong();
+                
+                _unrespondedPingPongRequests = 0;
+                _status = ConnectionStatus.Unconnected;
+                _currentEndPoint = null;  
             }
+            
         }
         private CancellationTokenSource _pingPongCancellationTokenSource = new CancellationTokenSource();
         public async Task StartPingPong()
@@ -150,22 +165,25 @@ namespace CustomProtocol.Net
                         pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
                         await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
                         _unrespondedPingPongRequests+=1;
+                        _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         await Task.Delay(5000);
+                        _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         
                     }
                     Console.WriteLine("Disconnected from host");
                 
 
                 }, _pingPongCancellationTokenSource.Token);
-            }catch(Exception e)
+            }catch(OperationCanceledException)
             {
-
+                Console.WriteLine("Ping pong task stopped");
             }
         }
         private void StopPingPong()
         {
             _pingPongCancellationTokenSource.Cancel();
             _unrespondedPingPongRequests = 0;
+            
         }
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
@@ -176,10 +194,7 @@ namespace CustomProtocol.Net
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }
-        public async Task HandleMessage(CustomProtocolMessage message, EndPoint senderEndPoint)
-        {
-
-        }
+     
         public async Task MakeRepeatRequest(UInt16 sequenceNumber, UInt16 id)
         {
             CustomProtocolMessage synMessage = new CustomProtocolMessage();
@@ -234,9 +249,12 @@ namespace CustomProtocol.Net
         }
         public async Task SendPong()
         {
-            CustomProtocolMessage pongMessage = new CustomProtocolMessage();
-            pongMessage.SetFlag(CustomProtocolFlag.Pong, true);
-            await _sendingSocket.SendToAsync(pongMessage.ToByteArray(), _currentEndPoint);
+            if(_currentEndPoint != null)
+            {
+                CustomProtocolMessage pongMessage = new CustomProtocolMessage();
+                pongMessage.SetFlag(CustomProtocolFlag.Pong, true);
+                await _sendingSocket.SendToAsync(pongMessage.ToByteArray(), _currentEndPoint);
+            }
         }
         public async Task AcceptDisconnection()
         {
@@ -263,6 +281,8 @@ namespace CustomProtocol.Net
             _unrespondedPingPongRequests = 0;
             _status = ConnectionStatus.Unconnected;
             _currentEndPoint = null;
+            Interrupted();
+           
         }
         
 

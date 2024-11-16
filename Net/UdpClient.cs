@@ -11,10 +11,7 @@ using NUnit.Framework.Constraints;
 
 namespace CustomProtocol.Net
 {
-    public enum UdpServerStatus
-    {
-        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck
-    }
+
     public class CustomUdpClient
     {
        
@@ -24,11 +21,7 @@ namespace CustomProtocol.Net
 
         protected Socket _sendingSocket;
         protected Socket _listeningSocket;
-        public UdpServerStatus status;
-        public UdpServerStatus Status
-        {
-            get;
-        }
+        
 
         
         
@@ -48,6 +41,12 @@ namespace CustomProtocol.Net
             _sendingSocket.SendBufferSize = (Int16.MaxValue/2)*10;
 
             _connection = new Connection(_listeningSocket, _sendingSocket);
+            _connection.Interrupted+= ()=>
+            {
+                ClearBeforeDisconnection();
+            };
+            
+
             StartListening();
         
 
@@ -250,7 +249,7 @@ namespace CustomProtocol.Net
             }
         }
        
-        private int _windowSize = 500;
+        private int _windowSize = 100;
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
           
@@ -386,12 +385,17 @@ namespace CustomProtocol.Net
             await _connection.Connect(port, address);
         
         }
+        public void ClearBeforeDisconnection()
+        {
+            _fragmentManager.ClearAllMessages();
+            _unAcknowledgedMessages.Clear();
+        }
         public async Task Disconnect()
         {
+            ClearBeforeDisconnection();
             Console.WriteLine("Disconnecting...");
             await _connection.Disconnect();
             Console.WriteLine("Disconnected");
-
             
         }
 
