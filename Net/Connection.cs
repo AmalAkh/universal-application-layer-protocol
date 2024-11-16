@@ -188,12 +188,13 @@ namespace CustomProtocol.Net
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
             byte[] bytes =message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.9995)
+            if(err && Random.Shared.NextDouble() > 0.9996)
             {
-             //   bytes[0] = 12;
+                bytes[0] = 12;
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }
+        
      
         public async Task MakeRepeatRequest(UInt16 sequenceNumber, UInt16 id)
         {

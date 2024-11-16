@@ -15,6 +15,8 @@ namespace CustomProtocol.Net
         
         private Dictionary<UInt16, Int32> _overrallMessagesCount = new Dictionary<UInt16, Int32>();
     
+
+        public event Action<UInt16,UInt16> FragmentLost;
         public FragmentManager()
         {
 
@@ -54,7 +56,17 @@ namespace CustomProtocol.Net
                 {
                     return false;
                 }
-
+                if(incomingMessage.SequenceNumber%25 == 0)
+                {
+                    for(UInt16 i = 0; i < incomingMessage.SequenceNumber;i++)
+                    {
+                        if(!_receivedSequenceNumbers[incomingMessage.Id].Contains(i))
+                        {   
+                            FragmentLost?.Invoke(incomingMessage.Id, i);
+                            Console.WriteLine($"Send NACK {i}");
+                        }
+                    }
+                }
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());

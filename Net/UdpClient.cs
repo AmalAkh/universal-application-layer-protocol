@@ -45,6 +45,11 @@ namespace CustomProtocol.Net
             {
                 ClearBeforeDisconnection();
             };
+
+            _fragmentManager.FragmentLost += async (id, sequenceNumber)=>
+            {
+                await _connection.MakeRepeatRequest(sequenceNumber,id);
+            };
             
 
             StartListening();
@@ -79,7 +84,7 @@ namespace CustomProtocol.Net
                         incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
                     }catch(DamagedMessageException e)
                     {
-                        Console.WriteLine("Fragment damaged");
+                        //Console.WriteLine("Fragment damaged");
                         continue;
                     }
                     if(_connection.IsConnectionTimeout)
@@ -117,6 +122,10 @@ namespace CustomProtocol.Net
                     }else if(incomingMessage.Ping)
                     {
                         await _connection.SendPong();
+                    }else if(incomingMessage.Syn && _connection.Status == ConnectionStatus.Connected)
+                    {
+                        await _connection.SendMessage(_currentFragmentsPortions[incomingMessage.Id][incomingMessage.SequenceNumber]);
+                        Console.WriteLine("Resend");
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
                         HandleMessage(incomingMessage);
@@ -224,8 +233,8 @@ namespace CustomProtocol.Net
                 }
                 
                 currentFragmentListIndex = 0;
+                _currentFragmentsPortions.Add(id, new List<CustomProtocolMessage>());
             
-                Console.WriteLine(seqq+UInt16.MaxValue*fragmentsToSend.Count-1);
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
                     Console.WriteLine($"Sending portion {i}");
@@ -243,9 +252,11 @@ namespace CustomProtocol.Net
         }
        
         private int _windowSize = 100;
+
+        private Dictionary<UInt16,List<CustomProtocolMessage>> _currentFragmentsPortions = new Dictionary<ushort, List<CustomProtocolMessage>>();
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
         {
-          
+            _currentFragmentsPortions[id] = currentFragmentsPortion;
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
             int previousWindowEnd = currentWindowStart+_windowSize-1;
@@ -357,6 +368,11 @@ namespace CustomProtocol.Net
                 }
             });
 
+        }
+        public async Task StartTimerForFragment(UInt16 id, UInt16 sequenceNumber)
+        {
+            await Task.Delay(2000);
+            
         }
         public CustomProtocolMessage CreateFragment(byte[] bytes, int start, uint fragmentSize)
         {
