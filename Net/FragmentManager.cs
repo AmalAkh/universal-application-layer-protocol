@@ -8,6 +8,8 @@ namespace CustomProtocol.Net
     public class FragmentManager
     {
         private Dictionary<uint, HashSet<uint>> _receivedSequenceNumbers = new Dictionary<uint, HashSet<uint>>();
+        private Dictionary<uint, int> _portionsCounts = new Dictionary<uint, int>();
+
         
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         
@@ -19,11 +21,10 @@ namespace CustomProtocol.Net
         }
         public bool CheckDeliveryCompletion(UInt16 id)
         {
-          //  Console.WriteLine(_fragmentedMessages[id].Count);
-           // Console.WriteLine(_overrallMessagesCount[id]);
+            
            // Console.WriteLine(_receivedSequenceNumbers[id].Count);
           
-            if(_overrallMessagesCount[id] != -1)
+          /*  if(_overrallMessagesCount[id] != -1)
             {
                 Console.WriteLine("");
                 Console.WriteLine("Missing:");
@@ -36,8 +37,8 @@ namespace CustomProtocol.Net
                 }
                 Console.WriteLine("");
 
-            }
-            return _overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _receivedSequenceNumbers[id].Count;
+            }*/
+            return _overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count;
         }
         public bool CheckSequenceNumberExcess(UInt16 id)
         {
@@ -45,7 +46,7 @@ namespace CustomProtocol.Net
         }
         public bool AddFragment(CustomProtocolMessage incomingMessage)
         {
-            incomingMessage.InternalSequenceNum = _fragmentedMessages.Count;
+            
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
                
@@ -53,29 +54,38 @@ namespace CustomProtocol.Net
                 {
                     return false;
                 }
-                
-                
 
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
                 
-                _overrallMessagesCount.Add(incomingMessage.Id, 0);
+                _overrallMessagesCount.Add(incomingMessage.Id, -1);
+                _portionsCounts.Add(incomingMessage.Id, 0);
+
                 
                 _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
                 _receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber);
                 
                 
             }
+            incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
+      //      Console.WriteLine(incomingMessage.InternalSequenceNum);
             _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
             if(CheckSequenceNumberExcess(incomingMessage.Id))
             {
-                
+                _portionsCounts[incomingMessage.Id]++; 
+              //  Console.WriteLine(_portionsCounts[incomingMessage.Id]*UInt16.MaxValue);
                 _receivedSequenceNumbers[incomingMessage.Id].Clear();
             }
             if(incomingMessage.Last)
             {
-                _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber+1;
+                _overrallMessagesCount[incomingMessage.Id] = _portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1) +incomingMessage.SequenceNumber+1;
+                Console.WriteLine(_portionsCounts[incomingMessage.Id]);
+                Console.WriteLine(incomingMessage.SequenceNumber+1);
+                Console.WriteLine((Int16.MaxValue+1));
+
+                Console.WriteLine(_fragmentedMessages[incomingMessage.Id].Count);
+                Console.WriteLine(_overrallMessagesCount[incomingMessage.Id]);
             }
             return true;
         }

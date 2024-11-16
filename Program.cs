@@ -25,7 +25,12 @@ if(address == "t1")
     udpServer.Start("127.0.0.1", 5050,8080);
 }else if(address == "t2"){
     udpServer.Start("127.0.0.1", 5656,6565);
-
+    await udpServer.Connect(5050, "127.0.0.1");
+}
+else if(address == "t24"){
+    udpServer.Start("127.0.0.1", 5656,6565);
+    await udpServer.Connect(5050, "127.0.0.1");
+   // await udpServer.SendFile()
 }
 else if(address == "t3"){
     udpServer.Start("192.168.1.40", 10080,10080);

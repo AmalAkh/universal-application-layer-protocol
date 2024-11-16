@@ -190,7 +190,9 @@ namespace CustomProtocol.Net
                 int currentWindowStart = 0;
                 int currentWindowEnd = currentWindowStart+_windowSize-1;
                 int currentFragmentListIndex = 0;
+                int count = 0;
                 fragmentsToSend.Add(new List<CustomProtocolMessage>());
+                int seqq = 0;
                 for(int i = 0; i < bytes.Length; i+=(int)fragmentSize)
                 {   
                     
@@ -199,16 +201,21 @@ namespace CustomProtocol.Net
                     message.IsFile = isFile;
                     message.FilenameOffset = filenameOffset;
                     message.SequenceNumber = seqNum;
-                    message.Id = id;
+                    message.Id = id;    
+                    if(message.Last)
+                    {
+                        seqq = message.SequenceNumber;
+                    }
 
                     fragmentsToSend[currentFragmentListIndex].Add(message);
-
+                    count++;
                     if(seqNum == UInt16.MaxValue)
                     {
                         fragmentsToSend.Add(new List<CustomProtocolMessage>());
                         
                         currentFragmentListIndex+=1;
                         seqNum = 0;
+                        
                     }else
                     {
                         seqNum++;
@@ -217,7 +224,8 @@ namespace CustomProtocol.Net
                 }
                 
                 currentFragmentListIndex = 0;
-                
+            
+                Console.WriteLine(seqq+UInt16.MaxValue*fragmentsToSend.Count-1);
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
                     Console.WriteLine($"Sending portion {i}");
@@ -358,6 +366,7 @@ namespace CustomProtocol.Net
         
             if(end > bytes.Length-1)
             {
+                Console.WriteLine("Last fragmenr created");
                 message.SetFlag(CustomProtocolFlag.Last, true);
             }
             message.Data = bytes.Take(new Range(start, end)).ToArray();
