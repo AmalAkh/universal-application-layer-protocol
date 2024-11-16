@@ -11,7 +11,7 @@ namespace CustomProtocol.Net
         
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         
-        private Dictionary<UInt16, UInt32> _overrallMessagesCount = new Dictionary<UInt16, UInt32>();
+        private Dictionary<UInt16, Int32> _overrallMessagesCount = new Dictionary<UInt16, Int32>();
     
         public FragmentManager()
         {
@@ -23,7 +23,7 @@ namespace CustomProtocol.Net
            // Console.WriteLine(_overrallMessagesCount[id]);
            // Console.WriteLine(_receivedSequenceNumbers[id].Count);
           
-            if(_overrallMessagesCount[id] != 0)
+            if(_overrallMessagesCount[id] != -1)
             {
                 Console.WriteLine("");
                 Console.WriteLine("Missing:");
@@ -37,7 +37,7 @@ namespace CustomProtocol.Net
                 Console.WriteLine("");
 
             }
-            return _overrallMessagesCount[id] != 0 && _overrallMessagesCount[id]+1 == _receivedSequenceNumbers[id].Count;
+            return _overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _receivedSequenceNumbers[id].Count;
         }
         public bool CheckSequenceNumberExcess(UInt16 id)
         {
@@ -48,6 +48,7 @@ namespace CustomProtocol.Net
             incomingMessage.InternalSequenceNum = _fragmentedMessages.Count;
             if(_fragmentedMessages.ContainsKey(incomingMessage.Id))
             {
+               
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber))
                 {
                     return false;
@@ -74,7 +75,7 @@ namespace CustomProtocol.Net
             }
             if(incomingMessage.Last)
             {
-                _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber;
+                _overrallMessagesCount[incomingMessage.Id] = incomingMessage.SequenceNumber+1;
             }
             return true;
         }

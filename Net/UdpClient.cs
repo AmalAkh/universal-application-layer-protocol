@@ -132,41 +132,36 @@ namespace CustomProtocol.Net
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
             _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
-            if(incomingMessage.Last && incomingMessage.SequenceNumber == 0)
+           
+            // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
+            
+            if(!_fragmentManager.AddFragment(incomingMessage))
             {
-                Console.WriteLine("New message:");
-                Console.WriteLine(Encoding.ASCII.GetString(incomingMessage.Data));
-            }else 
-            {
-               // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
-              
-                if(!_fragmentManager.AddFragment(incomingMessage))
-                {
-                    return;
-                }
-                
+                return;
+            }
+            
 
-                if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
+            if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
+            {
+                if(!incomingMessage.IsFile)
                 {
-                    if(!incomingMessage.IsFile)
-                    {
-                        Console.WriteLine("New message:");
-                        Console.WriteLine(_fragmentManager.AssembleFragmentsAsText(incomingMessage.Id));
-                        _fragmentManager.ClearMessages(incomingMessage.Id);
-                    }else
-                    {
-                        Console.WriteLine("File received");
-                        await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id);
-                        _fragmentManager.ClearMessages(incomingMessage.Id);
-                    }
+                    Console.WriteLine("New message:");
+                    Console.WriteLine(_fragmentManager.AssembleFragmentsAsText(incomingMessage.Id));
+                    _fragmentManager.ClearMessages(incomingMessage.Id);
+                }else
+                {
+                    Console.WriteLine("File received");
+                    await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id);
+                    _fragmentManager.ClearMessages(incomingMessage.Id);
                 }
             }
+        }
             
           
             
             
         
-        }
+        
         
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
@@ -187,66 +182,56 @@ namespace CustomProtocol.Net
             UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
             UInt16 seqNum = 0;
             _unAcknowledgedMessages.Add(id, new List<uint>());
-            if(bytes.Length <= fragmentSize)
+            
+
+            await Task.Run(async ()=>
             {
-                CustomProtocolMessage message = new CustomProtocolMessage();
-                
-                message.SetFlag(CustomProtocolFlag.Last, true);
-                message.Data = bytes;
-                await _connection.SendMessage(message);
-                Console.WriteLine("Message sent");
-            }else
-            {   
-
-                await Task.Run(async ()=>
-                {
-                    List<List<CustomProtocolMessage>> fragmentsToSend = new List<List<CustomProtocolMessage>>();
-                    int currentWindowStart = 0;
-                    int currentWindowEnd = currentWindowStart+_windowSize-1;
-                    int currentFragmentListIndex = 0;
-                    fragmentsToSend.Add(new List<CustomProtocolMessage>());
-                    for(int i = 0; i < bytes.Length; i+=(int)fragmentSize)
-                    {   
-                       
-                        
-                        CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
-                        message.IsFile = isFile;
-                        message.FilenameOffset = filenameOffset;
-                        message.SequenceNumber = seqNum;
-                        message.Id = id;
-
-                        fragmentsToSend[currentFragmentListIndex].Add(message);
-
-                        if(seqNum == UInt16.MaxValue)
-                        {
-                            fragmentsToSend.Add(new List<CustomProtocolMessage>());
-                            
-                            currentFragmentListIndex+=1;
-                            seqNum = 0;
-                        }else
-                        {
-                            seqNum++;
-                        }
-
-                    }
-                    fragmentsToSend[currentFragmentListIndex][fragmentsToSend[currentFragmentListIndex].Count-1].Last = true;
-               
-                    currentFragmentListIndex = 0;
+                List<List<CustomProtocolMessage>> fragmentsToSend = new List<List<CustomProtocolMessage>>();
+                int currentWindowStart = 0;
+                int currentWindowEnd = currentWindowStart+_windowSize-1;
+                int currentFragmentListIndex = 0;
+                fragmentsToSend.Add(new List<CustomProtocolMessage>());
+                for(int i = 0; i < bytes.Length; i+=(int)fragmentSize)
+                {   
                     
-                    for(int i = 0; i < fragmentsToSend.Count; i++)
+                    
+                    CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
+                    message.IsFile = isFile;
+                    message.FilenameOffset = filenameOffset;
+                    message.SequenceNumber = seqNum;
+                    message.Id = id;
+
+                    fragmentsToSend[currentFragmentListIndex].Add(message);
+
+                    if(seqNum == UInt16.MaxValue)
                     {
-                       Console.WriteLine($"Sending portion {i}");
-                       await StartSendingFragments(fragmentsToSend[i], id);
-                      
-                       currentFragmentListIndex++;
+                        fragmentsToSend.Add(new List<CustomProtocolMessage>());
+                        
+                        currentFragmentListIndex+=1;
+                        seqNum = 0;
+                    }else
+                    {
+                        seqNum++;
                     }
-                   
-                    Console.WriteLine("Message sent");
+
+                }
+                
+                currentFragmentListIndex = 0;
+                
+                for(int i = 0; i < fragmentsToSend.Count; i++)
+                {
+                    Console.WriteLine($"Sending portion {i}");
+                    await StartSendingFragments(fragmentsToSend[i], id);
                     
-                });
+                    currentFragmentListIndex++;
+                }
+                
+                Console.WriteLine("Message sent");
+                
+            });
                 
                 
-            }
+            
         }
        
         private int _windowSize = 100;
@@ -371,7 +356,7 @@ namespace CustomProtocol.Net
             
             int end = (int)(start+fragmentSize);
         
-            if(end > bytes.Length)
+            if(end > bytes.Length-1)
             {
                 message.SetFlag(CustomProtocolFlag.Last, true);
             }
