@@ -152,18 +152,23 @@ namespace CustomProtocol.Net
 
             if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
             {
+                _fragmentManager.StopWatch(incomingMessage.Id);
                 StopCheckingUndeliveredFragments(incomingMessage.Id);
                 if(!incomingMessage.IsFile)
                 {
                     Console.WriteLine("New message:");
                     Console.WriteLine(_fragmentManager.AssembleFragmentsAsText(incomingMessage.Id));
-                    _fragmentManager.ClearMessages(incomingMessage.Id);
+                    
                 }else
                 {
                     Console.WriteLine("File received");
                     await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id);
-                    _fragmentManager.ClearMessages(incomingMessage.Id);
+                    
                 }
+                Console.WriteLine("Time:");
+                Console.WriteLine(_fragmentManager.GetTransmissionTime(incomingMessage.Id));
+                _fragmentManager.ClearMessages(incomingMessage.Id);
+
             }
         }
             

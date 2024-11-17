@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using System.Text;
+using Timers = System.Timers;
 using NUnit.Framework.Interfaces;
+using System.Diagnostics;
 
 namespace CustomProtocol.Net
 {
@@ -10,6 +12,7 @@ namespace CustomProtocol.Net
         private Dictionary<uint, HashSet<uint>> _receivedSequenceNumbers = new Dictionary<uint, HashSet<uint>>();
         private Dictionary<uint, int> _portionsCounts = new Dictionary<uint, int>();
 
+        private Dictionary<UInt16, Stopwatch> _watches = new Dictionary<ushort, Stopwatch>();
         
         private Dictionary<uint, List<CustomProtocolMessage>> _fragmentedMessages = new Dictionary<uint, List<CustomProtocolMessage>>();
         
@@ -28,6 +31,19 @@ namespace CustomProtocol.Net
         public event Action<UInt16,UInt16> FragmentLost;
         public FragmentManager()
         {
+
+        }
+        public void StopWatch(UInt16 id)
+        {
+            _watches[id].Stop();
+        }
+        public string GetTransmissionTime(UInt16 id)
+        {
+            var ts = _watches[id].Elapsed;
+            Console.WriteLine(ts);
+            return String.Format("{0:00}:{1:00}.{2:00}",
+            ts.Minutes, ts.Seconds,
+            ts.Milliseconds / 10);
 
         }
         public bool CheckDeliveryCompletion(UInt16 id)
@@ -76,26 +92,25 @@ namespace CustomProtocol.Net
                 _portionsCounts.Add(incomingMessage.Id, 0);
                 _undeliveredFragments.Add(incomingMessage.Id, new HashSet<ushort>());
 
-                
+                _watches.Add(incomingMessage.Id, new Stopwatch());
+                _watches[incomingMessage.Id].Start();
+
                 _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
                 _receivedSequenceNumbers[incomingMessage.Id].Add(incomingMessage.SequenceNumber);
                 
                 
             }
             _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
-
-            for(UInt16 i = 0; i < incomingMessage.SequenceNumber;i++)
+            
+            for(int i = incomingMessage.SequenceNumber-10;i > 0 && i < incomingMessage.SequenceNumber;i--)
             {
-                if(!_receivedSequenceNumbers[incomingMessage.Id].Contains(i))
+                if(!_receivedSequenceNumbers[incomingMessage.Id].Contains((UInt16)i))
                 {   
-                    if(_undeliveredFragments[incomingMessage.Id].Add(i))
-                    {
-                        // FragmentLost?.Invoke(incomingMessage.Id, i);
-                        // Console.WriteLine($"Send NACK {i}");
-                    }
+                    _undeliveredFragments[incomingMessage.Id].Add((UInt16)i);
                     
                 }
             }
+            
         incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
       //      Console.WriteLine(incomingMessage.InternalSequenceNum);
             _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
@@ -212,6 +227,7 @@ namespace CustomProtocol.Net
             _fragmentedMessages.Remove(id);
             _overrallMessagesCount.Remove(id);
             _receivedSequenceNumbers[id].Clear();
+            _watches.Remove(id);
 
         }
         public void ClearAllMessages()
@@ -219,6 +235,8 @@ namespace CustomProtocol.Net
             _fragmentedMessages.Clear();
             _overrallMessagesCount.Clear();
             _receivedSequenceNumbers.Clear();
+            _portionsCounts.Clear();
+            _watches.Clear();
         }
 
                 
