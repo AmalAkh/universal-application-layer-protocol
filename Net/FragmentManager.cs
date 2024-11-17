@@ -15,7 +15,16 @@ namespace CustomProtocol.Net
         
         private Dictionary<UInt16, Int32> _overrallMessagesCount = new Dictionary<UInt16, Int32>();
     
+        private Dictionary<UInt16, HashSet<UInt16>> _undeliveredFragments = new Dictionary<ushort, HashSet<ushort>>();
 
+        public bool IsFirstFragment(UInt16 id)
+        {
+            return _fragmentedMessages.Count == 0;
+        }
+        public List<UInt16> GetUndeliveredFragments(UInt16 id)
+        {
+            return _undeliveredFragments[id].ToList();
+        }
         public event Action<UInt16,UInt16> FragmentLost;
         public FragmentManager()
         {
@@ -56,23 +65,16 @@ namespace CustomProtocol.Net
                 {
                     return false;
                 }
-                if(incomingMessage.SequenceNumber%25 == 0)
-                {
-                    for(UInt16 i = 0; i < incomingMessage.SequenceNumber;i++)
-                    {
-                        if(!_receivedSequenceNumbers[incomingMessage.Id].Contains(i))
-                        {   
-                            FragmentLost?.Invoke(incomingMessage.Id, i);
-                            Console.WriteLine($"Send NACK {i}");
-                        }
-                    }
-                }
+                
+                
+                
             }else
             {
                 _fragmentedMessages.Add(incomingMessage.Id, new List<CustomProtocolMessage>());
                 
                 _overrallMessagesCount.Add(incomingMessage.Id, -1);
                 _portionsCounts.Add(incomingMessage.Id, 0);
+                _undeliveredFragments.Add(incomingMessage.Id, new HashSet<ushort>());
 
                 
                 _receivedSequenceNumbers.Add(incomingMessage.Id, new HashSet<uint>());
@@ -80,7 +82,21 @@ namespace CustomProtocol.Net
                 
                 
             }
-            incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
+            _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+
+            for(UInt16 i = 0; i < incomingMessage.SequenceNumber;i++)
+            {
+                if(!_receivedSequenceNumbers[incomingMessage.Id].Contains(i))
+                {   
+                    if(_undeliveredFragments[incomingMessage.Id].Add(i))
+                    {
+                        // FragmentLost?.Invoke(incomingMessage.Id, i);
+                        // Console.WriteLine($"Send NACK {i}");
+                    }
+                    
+                }
+            }
+        incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
       //      Console.WriteLine(incomingMessage.InternalSequenceNum);
             _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
             if(CheckSequenceNumberExcess(incomingMessage.Id))

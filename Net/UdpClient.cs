@@ -46,10 +46,7 @@ namespace CustomProtocol.Net
                 ClearBeforeDisconnection();
             };
 
-            _fragmentManager.FragmentLost += async (id, sequenceNumber)=>
-            {
-                await _connection.MakeRepeatRequest(sequenceNumber,id);
-            };
+          
             
 
             StartListening();
@@ -125,7 +122,7 @@ namespace CustomProtocol.Net
                     }else if(incomingMessage.Syn && _connection.Status == ConnectionStatus.Connected)
                     {
                         await _connection.SendMessage(_currentFragmentsPortions[incomingMessage.Id][incomingMessage.SequenceNumber]);
-                        Console.WriteLine("Resend");
+                        Console.WriteLine($"Resend {incomingMessage.SequenceNumber}");
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
                         HandleMessage(incomingMessage);
@@ -143,7 +140,10 @@ namespace CustomProtocol.Net
             _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
            
             // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
-            
+            if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
+            {
+                StartCheckingUndeliveredFragments(incomingMessage.Id);
+            }
             if(!_fragmentManager.AddFragment(incomingMessage))
             {
                 return;
@@ -152,6 +152,7 @@ namespace CustomProtocol.Net
 
             if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
             {
+                StopCheckingUndeliveredFragments(incomingMessage.Id);
                 if(!incomingMessage.IsFile)
                 {
                     Console.WriteLine("New message:");
@@ -293,7 +294,7 @@ namespace CustomProtocol.Net
                         Console.WriteLine("Last fragment");
                     }
                     await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], true);
-                  // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[j].SequenceNumber}");
+                 //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
                     
@@ -352,7 +353,7 @@ namespace CustomProtocol.Net
                     
                     
                     overralTime+=delay;
-                    if(c >= 10)
+                    if(c >= 50)
                     {
                         Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
@@ -369,10 +370,36 @@ namespace CustomProtocol.Net
             });
 
         }
-        public async Task StartTimerForFragment(UInt16 id, UInt16 sequenceNumber)
+        Dictionary<UInt16, CancellationTokenSource> _checkingUndeliveredFragmentsCancellationTokenSources = new Dictionary<ushort, CancellationTokenSource>();
+        public async Task StartCheckingUndeliveredFragments(UInt16 id)
         {
-            await Task.Delay(2000);
-            
+            _checkingUndeliveredFragmentsCancellationTokenSources.Add(id, new CancellationTokenSource());
+            await Task.Run(async ()=>
+            {
+                try
+                {
+                    while(true)
+                    {
+                        _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
+                        await Task.Delay(500);
+                        _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
+
+                        foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))
+                        {   
+                            Console.WriteLine($"Requested {sequenceNumber}");
+                            await _connection.MakeRepeatRequest(sequenceNumber, id);
+                        }
+                    }
+                }catch(OperationCanceledException e)
+                {
+                    Console.WriteLine("Checking stopped");
+                }
+            },_checkingUndeliveredFragmentsCancellationTokenSources[id].Token);
+
+        }
+        private void StopCheckingUndeliveredFragments(UInt16 id)
+        {
+            _checkingUndeliveredFragmentsCancellationTokenSources[id].Cancel();
         }
         public CustomProtocolMessage CreateFragment(byte[] bytes, int start, uint fragmentSize)
         {
