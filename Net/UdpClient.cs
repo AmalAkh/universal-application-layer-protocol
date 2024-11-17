@@ -381,7 +381,7 @@ namespace CustomProtocol.Net
                     while(true)
                     {
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
-                        await Task.Delay(500);
+                        await Task.Delay(1000);
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
 
                         foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))
