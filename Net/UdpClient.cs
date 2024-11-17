@@ -269,7 +269,7 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-               
+               currentFragmentsPortion[i].WindowStart = (ushort)currentWindowStart;
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
@@ -287,11 +287,12 @@ namespace CustomProtocol.Net
                 previousWindowEnd = Int32.Max(currentWindowEnd, previousWindowEnd);
                 currentWindowEnd = currentWindowStart+_windowSize-1;
               
-        
+                int previousWindowEndInitial = previousWindowEnd;
                 for(;previousWindowEnd <= currentWindowEnd && previousWindowEnd < currentFragmentsPortion.Count;previousWindowEnd++)
                 {
-                 
-
+                    
+                    currentFragmentsPortion[previousWindowEnd].WindowStart = (ushort)(currentWindowStart-1);
+                    //Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
             
                     if(currentFragmentsPortion[previousWindowEnd].Last)
@@ -386,7 +387,7 @@ namespace CustomProtocol.Net
                     while(true)
                     {
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
-                        await Task.Delay(1000);
+                        await Task.Delay(250);
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
 
                         foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))

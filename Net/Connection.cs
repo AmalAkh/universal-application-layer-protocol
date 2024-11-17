@@ -188,9 +188,9 @@ namespace CustomProtocol.Net
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
             byte[] bytes =message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.9996)
+            if(err && Random.Shared.NextDouble() > 0.9998)
             {
-              //  bytes[0] = 12;
+                bytes[0] = 12;
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }

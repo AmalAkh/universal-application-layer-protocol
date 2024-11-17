@@ -40,7 +40,7 @@ namespace CustomProtocol.Net
         public string GetTransmissionTime(UInt16 id)
         {
             var ts = _watches[id].Elapsed;
-            Console.WriteLine(ts);
+       
             return String.Format("{0:00}:{1:00}.{2:00}",
             ts.Minutes, ts.Seconds,
             ts.Milliseconds / 10);
@@ -100,18 +100,26 @@ namespace CustomProtocol.Net
                 
                 
             }
-            _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
             
-            for(int i = incomingMessage.SequenceNumber-10;i > 0 && i < incomingMessage.SequenceNumber;i--)
+            _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
+        //    Console.WriteLine(incomingMessage.SequenceNumber-incomingMessage.WindowStart);
+            for(int i = incomingMessage.SequenceNumber-1; i >= 0 ;i--)
             {
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Contains((UInt16)i))
                 {   
+                //    Console.WriteLine(i);
                     _undeliveredFragments[incomingMessage.Id].Add((UInt16)i);
                     
+                }else
+                {
+                   
+                    break;
                 }
             }
             
-        incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
+            
+            
+            incomingMessage.InternalSequenceNum = incomingMessage.SequenceNumber+_portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1);
       //      Console.WriteLine(incomingMessage.InternalSequenceNum);
             _fragmentedMessages[incomingMessage.Id].Add(incomingMessage);
             if(CheckSequenceNumberExcess(incomingMessage.Id))
