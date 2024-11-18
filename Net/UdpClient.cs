@@ -143,6 +143,7 @@ namespace CustomProtocol.Net
             // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
+                _connection.StartTransmission();
                 StartCheckingUndeliveredFragments(incomingMessage.Id);
             }
             if(!_fragmentManager.AddFragment(incomingMessage))
@@ -153,6 +154,7 @@ namespace CustomProtocol.Net
 
             if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
             {
+                _connection.StopTransmission();
                 _fragmentManager.StopWatch(incomingMessage.Id);
                 StopCheckingUndeliveredFragments(incomingMessage.Id);
                 if(!incomingMessage.IsFile)
@@ -195,6 +197,7 @@ namespace CustomProtocol.Net
         public async Task SendMessage(byte[] bytes, uint fragmentSize = 4, bool isFile=false, UInt16 filenameOffset=0)
         {
             Console.WriteLine("sending");
+            _connection.StartTransmission();
             UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
             UInt16 seqNum = 0;
             _unAcknowledgedMessages.Add(id, new List<uint>());
@@ -251,6 +254,8 @@ namespace CustomProtocol.Net
                 }
                 
                 Console.WriteLine("Message sent");
+                _connection.StopTransmission();
+
                 
             });
                 

@@ -5,16 +5,18 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using NUnit.Framework.Internal.Execution;
-
+using System.Threading;
 
 namespace CustomProtocol.Net
 {
     public enum ConnectionStatus
     {
-        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck, WaitingForDisconnection
+        Unconnected, Connected, WaitingForIncomingConnectionAck, WaitingForOutgoingConnectionAck, WaitingForDisconnection,
+       
     }
     public class Connection
     {
+        private int _transmissions = 0;
        
         public delegate void ConnectionEventHandler();
 
@@ -75,6 +77,13 @@ namespace CustomProtocol.Net
                 return _unrespondedPingPongRequests > 3;
             }
         }
+        public bool IsTransmitting
+        {
+            get
+            {
+                return _transmissions != 0;
+            }
+        }
         private int _currentConnectionTime = 0;
         
 
@@ -116,6 +125,18 @@ namespace CustomProtocol.Net
            
             
         }
+        public void StartTransmission()
+        {
+            Console.WriteLine("transmission");
+            _transmissions++;
+        }
+        public void StopTransmission()
+        {
+            Console.WriteLine("no transmission");
+            
+            _transmissions--;
+        }
+       
         public async Task Connect(ushort port, string address)
         {
             _currentConnectionTime = 0;
@@ -160,14 +181,17 @@ namespace CustomProtocol.Net
                     _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                     while(_unrespondedPingPongRequests < 3)
                     {
-                    
-                        CustomProtocolMessage pingMessage = new CustomProtocolMessage();
-                        pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
-                        await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
-                        _unrespondedPingPongRequests+=1;
-                        _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        await Task.Delay(5000);
-                        _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        if(!IsTransmitting)
+                        {
+                            
+                            CustomProtocolMessage pingMessage = new CustomProtocolMessage();
+                            pingMessage.SetFlag(CustomProtocolFlag.Ping, true);
+                            await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
+                            _unrespondedPingPongRequests+=1;
+                            _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                            await Task.Delay(5000);
+                            _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        }
                         
                     }
                     Console.WriteLine("Disconnected from host");
