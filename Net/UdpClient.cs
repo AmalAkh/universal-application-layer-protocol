@@ -39,7 +39,7 @@ namespace CustomProtocol.Net
             _sendingSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram, ProtocolType.Udp);
             _sendingSocket.Bind(new IPEndPoint(IPAddress.Parse(address), sendingPort));
             _sendingSocket.SendBufferSize = (Int16.MaxValue/2)*10;
-
+            
             _connection = new Connection(_listeningSocket, _sendingSocket);
             _connection.Interrupted+= ()=>
             {
@@ -125,6 +125,7 @@ namespace CustomProtocol.Net
                         Console.WriteLine($"Resend {incomingMessage.SequenceNumber}");
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
+                       // Console.WriteLine(_listeningSocket.Available);
                         HandleMessage(incomingMessage);
                     }
                     
@@ -257,7 +258,7 @@ namespace CustomProtocol.Net
             
         }
        
-        private int _windowSize = 100;
+        private int _windowSize = 10;
 
         private Dictionary<UInt16,List<CustomProtocolMessage>> _currentFragmentsPortions = new Dictionary<ushort, List<CustomProtocolMessage>>();
         private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
@@ -269,7 +270,7 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-               currentFragmentsPortion[i].WindowStart = (ushort)currentWindowStart;
+            
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
@@ -291,7 +292,7 @@ namespace CustomProtocol.Net
                 for(;previousWindowEnd <= currentWindowEnd && previousWindowEnd < currentFragmentsPortion.Count;previousWindowEnd++)
                 {
                     
-                    currentFragmentsPortion[previousWindowEnd].WindowStart = (ushort)(currentWindowStart-1);
+                 
                     //Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
             
@@ -389,7 +390,7 @@ namespace CustomProtocol.Net
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
                         await Task.Delay(250);
                         _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
-
+                     //   Console.WriteLine(_fragmentManager.GetUndeliveredFragments(id).Count);
                         foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))
                         {   
                             Console.WriteLine($"Requested {sequenceNumber}");

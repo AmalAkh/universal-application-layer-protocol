@@ -103,11 +103,12 @@ namespace CustomProtocol.Net
             
             _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
         //    Console.WriteLine(incomingMessage.SequenceNumber-incomingMessage.WindowStart);
-            for(int i = incomingMessage.SequenceNumber-1; i >= 0 ;i--)
+            for(int i = incomingMessage.SequenceNumber-1; i >= 0 ;i++)
             {
+              
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Contains((UInt16)i))
                 {   
-                //    Console.WriteLine(i);
+                    
                     _undeliveredFragments[incomingMessage.Id].Add((UInt16)i);
                     
                 }else
@@ -131,12 +132,7 @@ namespace CustomProtocol.Net
             if(incomingMessage.Last)
             {
                 _overrallMessagesCount[incomingMessage.Id] = _portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1) +incomingMessage.SequenceNumber+1;
-                Console.WriteLine(_portionsCounts[incomingMessage.Id]);
-                Console.WriteLine(incomingMessage.SequenceNumber+1);
-                Console.WriteLine((Int16.MaxValue+1));
-
-                Console.WriteLine(_fragmentedMessages[incomingMessage.Id].Count);
-                Console.WriteLine(_overrallMessagesCount[incomingMessage.Id]);
+               
             }
             return true;
         }

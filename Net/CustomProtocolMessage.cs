@@ -13,7 +13,7 @@ namespace CustomProtocol.Net
     public class CustomProtocolMessage
     {
         public UInt16 SequenceNumber = 0;
-        public UInt16 WindowStart = 0;
+      
 
         public UInt16 Id;
         public bool[] Flags;
@@ -31,7 +31,7 @@ namespace CustomProtocol.Net
         public CustomProtocolMessage()
         {
             Flags = new bool[8];
-            Data = new byte[1];
+            Data = new byte[0];
             FilenameOffset = 0;
         }
         public bool Ack
@@ -129,9 +129,9 @@ namespace CustomProtocol.Net
                 power--;
             }
            
-            CheckSum = CRC16Implementation.Compute([..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..BitConverter.GetBytes(WindowStart),..Data]);
+            CheckSum = CRC16Implementation.Compute([..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data]);
 
-            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..BitConverter.GetBytes(WindowStart),..Data, BitConverter.GetBytes(CheckSum)[1],BitConverter.GetBytes(CheckSum)[0]];
+            byte[] bytes = [..BitConverter.GetBytes(SequenceNumber), ..BitConverter.GetBytes(Id),flagsByte,..BitConverter.GetBytes(FilenameOffset),..Data, BitConverter.GetBytes(CheckSum)[1],BitConverter.GetBytes(CheckSum)[0]];
          
             return  bytes;
             
@@ -152,14 +152,14 @@ namespace CustomProtocol.Net
 
          
             message.FilenameOffset = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 5,2));
-            message.WindowStart = BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, 7,2));
+            
 
 
 
 
             
 
-            message.Data = bytes.Take(new Range(9, bytes.Length -2)).ToArray<byte>();
+            message.Data = bytes.Take(new Range(7, bytes.Length -2)).ToArray<byte>();
             if(CRC16Implementation.Compute(bytes) != 0)
             {
                 throw new DamagedMessageException();
