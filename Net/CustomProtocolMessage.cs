@@ -8,7 +8,7 @@ namespace CustomProtocol.Net
 {
     public enum CustomProtocolFlag
     {
-        Ack = 0, Syn = 1, Last = 2, Ping = 3,Pong = 4, File=5, Finish=6
+        Ack = 0, Syn = 1, Last = 2, KeepAlive=3, File=4, Finish=5
     }
     public class CustomProtocolMessage
     {
@@ -89,28 +89,18 @@ namespace CustomProtocol.Net
                 Flags[(int)CustomProtocolFlag.Last] = value;
             }
         }
-        public bool Ping
+        public bool KeepAlive
         {
             get
             {
-                return Flags[(int)CustomProtocolFlag.Ping];
+                return Flags[(int)CustomProtocolFlag.KeepAlive];
             }
             set
             {
-                Flags[(int)CustomProtocolFlag.Ping] = value;
+                Flags[(int)CustomProtocolFlag.KeepAlive] = value;
             }
         }
-        public bool Pong
-        {
-            get
-            {
-                return Flags[(int)CustomProtocolFlag.Pong];
-            }
-            set
-            {
-                Flags[(int)CustomProtocolFlag.Pong] = value;
-            }
-        }
+        
         public void SetFlag(CustomProtocolFlag flag, bool value)
         {
             Flags[Convert.ToInt16(flag)] = value;

@@ -97,9 +97,9 @@ namespace CustomProtocol.Net
                     }else if(_connection.Status == ConnectionStatus.WaitingForOutgoingConnectionAck && incomingMessage.Ack && incomingMessage.Syn)
                     {
                         await _connection.EstablishOutgoingConnection(new IPEndPoint(senderEndPoint.Address, BitConverter.ToInt16(incomingMessage.Data) ));
-                    }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Pong)
+                    }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.KeepAlive)
                     {
-                        _connection.ReceivePong();
+                        _connection.ReceiveKeepAliveResponse();
                         if(_connection.Status == ConnectionStatus.Emergency)
                         {
                             _connection.CancelEmergencyCheck();
@@ -116,9 +116,9 @@ namespace CustomProtocol.Net
                             _unAcknowledgedMessages[incomingMessage.Id].RemoveAll((seqNum)=>seqNum==incomingMessage.SequenceNumber);
 
                         }
-                    }else if(incomingMessage.Ping)
+                    }else if(incomingMessage.KeepAlive)
                     {
-                        await _connection.SendPong();
+                        await _connection.SendKeepAliveResponse();
                     }else if(incomingMessage.Syn && _connection.Status == ConnectionStatus.Connected)
                     {
                         await _connection.SendMessage(_currentFragmentsPortions[incomingMessage.Id][incomingMessage.SequenceNumber]);
