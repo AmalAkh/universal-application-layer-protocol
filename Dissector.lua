@@ -1,4 +1,4 @@
-excom_proto = Proto('custom-protocl', 'EXample COMmunication protocol')
+excom_proto = Proto('custom-protocol', 'My custom protocol')
 
 -- Helper function for ProtoField names
 local function field(field_name)
@@ -22,7 +22,13 @@ local fields = {
     -- request_t
     id = ProtoField.uint16(field('id'), 'Id', base.HEX),
     -- response_t
-    flags = ProtoField.uint16(field('flags'), 'flags'),
+    flags = ProtoField.uint16(field('flags'), 'Flags'),
+
+    ack_flag = ProtoField.bool(field('ack'), "ACK Flag", 8, nil, 0x80),
+    syn_flag = ProtoField.bool(field('syn'), "Syn Flag", 8, nil, 0x40),
+    last_flag = ProtoField.bool("myproto.flags.syn", "LAST Flag", 8, nil, 0x20),
+    ping_flag = ProtoField.bool("myproto.flags.ping", "PING Flag", 8, nil, 0x10),
+    
 
 
     filename_offset = ProtoField.uint16(field('floffset'), 'Filename offset'),
@@ -33,6 +39,8 @@ local fields = {
 
 
 }
+
+
 
 -- Add all the types to Proto.fields list
 for _, proto_field in pairs(fields) do
@@ -52,16 +60,30 @@ excom_proto.dissector = function(buf, pinfo, root)
     -- Add new tree node for our protocol details
     local tree = root:add(excom_proto, buf())
 
+    
     -- Extract message ID, this is the same for request_t and response_t
     -- `id` is of type uint32_t, so get a sub-slice: buf(offset=0, length=4)
     local seq_num = buf(0, 2)
     tree:add_le(fields.sequence_number, seq_num)
     local id = buf(2, 2)
     tree:add_le(fields.id, id)
+
+
+    
     local flags = buf(4, 1)
-    tree:add_le(fields.flags, flags)
+    local flags_subtree = tree:add(flags, "Flags")
+    flags_subtree:add(fields.ack_flag, buf(4, 1))
+    flags_subtree:add(fields.syn_flag, buf(4, 1))
+    flags_subtree:add(fields.last_flag, buf(4, 1))
+    flags_subtree:add(fields.ping_flag, buf(4, 1))
+
+
+
+
     local filename_offset = buf(5, 2)
     tree:add_le(fields.filename_offset, filename_offset)
+
+   
 
     local data = buf(7, buf:len()-9)
     tree:add_le(fields.data, data)
