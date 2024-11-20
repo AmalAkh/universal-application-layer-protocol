@@ -23,7 +23,7 @@ namespace CustomProtocol.Net
         protected Socket _listeningSocket;
         
 
-        
+        private DateTime _lastMessageTime = DateTime.Now;
         
         FragmentManager _fragmentManager = new FragmentManager();
         public CustomUdpClient()
@@ -41,12 +41,8 @@ namespace CustomProtocol.Net
             _sendingSocket.SendBufferSize = (Int16.MaxValue/2)*10;
             
             _connection = new Connection(_listeningSocket, _sendingSocket);
-            _connection.Interrupted+= ()=>
-            {
-                ClearBeforeDisconnection();
-            };
-
-          
+            _connection.Interrupted+= InterruptConnection;
+            StartCheckingConnection();
             
 
             StartListening();
@@ -104,6 +100,10 @@ namespace CustomProtocol.Net
                     }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Pong)
                     {
                         _connection.ReceivePong();
+                        if(_connection.Status == ConnectionStatus.Emergency)
+                        {
+                            _connection.CancelEmergencyCheck();
+                        }
                     }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Finish)
                     {
                         await _connection.AcceptDisconnection();
@@ -112,7 +112,7 @@ namespace CustomProtocol.Net
                     {
                         if(_unAcknowledgedMessages.ContainsKey(incomingMessage.Id))
                         {
-
+                            _lastMessageTime = DateTime.Now;
                             _unAcknowledgedMessages[incomingMessage.Id].RemoveAll((seqNum)=>seqNum==incomingMessage.SequenceNumber);
 
                         }
@@ -135,11 +135,29 @@ namespace CustomProtocol.Net
             task.Start();
         }
         
+        public void StartCheckingConnection()
+        {
+            Task.Run(async ()=>
+            {
+                while(true)
+                {
+                    await Task.Delay(500);
+                    
+                    if(_connection.IsTransmitting && _connection.Status != ConnectionStatus.Unconnected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 3)
+                    {
+                        Console.WriteLine("Emergency check");
+                        await _connection.EmergencyCheck();
+
+                    }
+                }
+                
+            });
+        }
         
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
             _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
-           
+            _lastMessageTime = DateTime.Now;
             // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
@@ -252,7 +270,10 @@ namespace CustomProtocol.Net
                     
                     currentFragmentListIndex++;
                 }
-                
+                if(_connection.Status == ConnectionStatus.Connected)
+                {
+                    
+                }
                 Console.WriteLine("Message sent");
                 _connection.StopTransmission();
 
@@ -275,10 +296,20 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-            
+                try
+                {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
+                }catch(KeyNotFoundException)
+                {
+                    return;
+                }
+
+                if(_connection.Status == ConnectionStatus.Unconnected)
+                {
+                    return;
+                }
 
                 await _connection.SendMessage(currentFragmentsPortion[i]);
                
@@ -286,7 +317,10 @@ namespace CustomProtocol.Net
             }
             while(currentWindowEnd < currentFragmentsPortion.Count)
             {
-                  
+                if(_connection.Status == ConnectionStatus.Unconnected)
+                {
+                    return;
+                }
                 await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
                 currentWindowStart+=1;
                 
@@ -299,11 +333,20 @@ namespace CustomProtocol.Net
                     
                  
                     //Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
-                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
-            
+                    try
+                    {
+                        _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
+                    }catch(KeyNotFoundException e)
+                    {
+                        return;
+                    }
                     if(currentFragmentsPortion[previousWindowEnd].Last)
                     {
                         Console.WriteLine("Last fragment");
+                    }
+                    if(_connection.Status == ConnectionStatus.Unconnected)
+                    {
+                        return;   
                     }
                     await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], true);
                  //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
@@ -344,6 +387,14 @@ namespace CustomProtocol.Net
                 while(true)
                 {
                     await Task.Delay(delay);
+                    if(_connection.Status == ConnectionStatus.Emergency)
+                    {
+                        continue;
+                    }
+                    if(_connection.Status == ConnectionStatus.Unconnected)
+                    {
+                        return;
+                    }
                     c++;
                     if(!_unAcknowledgedMessages[id].Contains(seqNum))
                     {
@@ -411,7 +462,10 @@ namespace CustomProtocol.Net
         }
         private void StopCheckingUndeliveredFragments(UInt16 id)
         {
-            _checkingUndeliveredFragmentsCancellationTokenSources[id].Cancel();
+            if(_checkingUndeliveredFragmentsCancellationTokenSources.ContainsKey(id))
+            {
+                _checkingUndeliveredFragmentsCancellationTokenSources[id].Cancel();
+            }
         }
         public CustomProtocolMessage CreateFragment(byte[] bytes, int start, uint fragmentSize)
         {
@@ -437,7 +491,17 @@ namespace CustomProtocol.Net
         public void ClearBeforeDisconnection()
         {
             _fragmentManager.ClearAllMessages();
+
+            foreach(UInt16 id in _unAcknowledgedMessages.Keys)
+            {
+                StopCheckingUndeliveredFragments(id);
+            }
             _unAcknowledgedMessages.Clear();
+        }
+        private void InterruptConnection()
+        {
+            ClearBeforeDisconnection();
+            Console.WriteLine("Connection lost");
         }
         public async Task Disconnect()
         {
