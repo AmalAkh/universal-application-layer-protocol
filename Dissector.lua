@@ -1,20 +1,11 @@
-excom_proto = Proto('custom-protocol', 'My custom protocol')
+myproto = Proto('custom-protocol', 'My custom protocol')
 
 -- Helper function for ProtoField names
 local function field(field_name)
-    return string.format('%s.%s', excom_proto.name, field_name)
+    return string.format('%s.%s', myproto.name, field_name)
 end
 
--- RequestType enum
-local request_type = {
-    REQ_DISPLAY = 1,
-    REQ_LED = 2,
-}
--- Mapping of RequestType value to name
-local request_type_names = {}
-for name, value in pairs(request_type) do
-    request_type_names[value] = name
-end
+
 
 -- Define field types available in our protocol, as a table to easily reference them later
 local fields = {
@@ -24,12 +15,12 @@ local fields = {
     -- response_t
     flags = ProtoField.uint16(field('flags'), 'Flags'),
 
-    ack_flag = ProtoField.bool(field('ack'), "ACK Flag", 8, nil, 0x80),
-    syn_flag = ProtoField.bool(field('syn'), "Syn Flag", 8, nil, 0x40),
-    last_flag = ProtoField.bool("myproto.flags.syn", "LAST Flag", 8, nil, 0x20),
-    ping_flag = ProtoField.bool("myproto.flags.ping", "PING Flag", 8, nil, 0x10),
-    
-
+    ack_flag = ProtoField.bool(field('ack'), "Ack", 8, nil, 0x80),
+    syn_flag = ProtoField.bool(field('syn'), "Syn", 8, nil, 0x40),
+    last_flag = ProtoField.bool(field("last"), "Last", 8, nil, 0x20),
+    keepalive_flag = ProtoField.bool(field("keep-alive"), "Keep Alive", 8, nil, 0x10),
+    file_flag = ProtoField.bool(field("file"), "File", 8, nil, 0x8),
+    finish_flag = ProtoField.bool(field("finish"), "Finish", 8, nil, 0x4),
 
     filename_offset = ProtoField.uint16(field('floffset'), 'Filename offset'),
 
@@ -44,21 +35,21 @@ local fields = {
 
 -- Add all the types to Proto.fields list
 for _, proto_field in pairs(fields) do
-    table.insert(excom_proto.fields, proto_field)
+    table.insert(myproto.fields, proto_field)
 end
 
 -- Dissector callback, called for each packet
-excom_proto.dissector = function(buf, pinfo, root)
+myproto.dissector = function(buf, pinfo, root)
     -- arguments:
     -- buf: packet's buffer (https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_Tvb)
     -- pinfo: packet information (https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Pinfo.html#lua_class_Pinfo)
     -- root: node of packet details tree (https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tree.html#lua_class_TreeItem)
 
     -- Set name of the protocol
-    pinfo.cols.protocol:set(excom_proto.name)
+    pinfo.cols.protocol:set(myproto.name)
 
     -- Add new tree node for our protocol details
-    local tree = root:add(excom_proto, buf())
+    local tree = root:add(myproto, buf())
 
     
     -- Extract message ID, this is the same for request_t and response_t
@@ -75,10 +66,9 @@ excom_proto.dissector = function(buf, pinfo, root)
     flags_subtree:add(fields.ack_flag, buf(4, 1))
     flags_subtree:add(fields.syn_flag, buf(4, 1))
     flags_subtree:add(fields.last_flag, buf(4, 1))
-    flags_subtree:add(fields.ping_flag, buf(4, 1))
-
-
-
+    flags_subtree:add(fields.keepalive_flag, buf(4, 1))
+    flags_subtree:add(fields.file_flag, buf(4, 1))
+    flags_subtree:add(fields.finish_flag, buf(4, 1))
 
     local filename_offset = buf(5, 2)
     tree:add_le(fields.filename_offset, filename_offset)
@@ -95,13 +85,13 @@ end
 
 -- Register our protocol to be automatically used for traffic on port 9000
 local tcp_port1 = DissectorTable.get('udp.port')
-tcp_port1:add(5050, excom_proto)
+tcp_port1:add(5050, myproto)
 
 
 local tcp_port2 = DissectorTable.get('udp.port')
-tcp_port2:add(8080, excom_proto)
+tcp_port2:add(8080, myproto)
 
 local tcp_port3 = DissectorTable.get('udp.port')
-tcp_port3:add(6565, excom_proto)
+tcp_port3:add(6565, myproto)
 local tcp_port4 = DissectorTable.get('udp.port')
-tcp_port4:add(5656, excom_proto)
+tcp_port4:add(5656, myproto)
