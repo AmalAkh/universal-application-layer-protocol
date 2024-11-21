@@ -81,10 +81,13 @@ while(true)
 
         Dictionary<string, string> options = CLIArgsParser.Parse(command, 2);
         uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
+        bool err = options.ContainsKey("-err");
+
         Console.WriteLine(fragmentSize);
+       
 
    
-        await udpClient.SendFile(command.Split(" ")[1], fragmentSize);
+        await udpClient.SendFile(command.Split(" ")[1], fragmentSize, err);
     }
     else if(command.StartsWith("disconnect"))
     {

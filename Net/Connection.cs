@@ -247,10 +247,10 @@ namespace CustomProtocol.Net
         }
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
-            byte[] bytes =message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.9998)
+            byte[] bytes = message.ToByteArray();
+            if(err && Random.Shared.NextDouble() > 0.9999)
             {
-              //  bytes[0] = 12;
+                bytes[Random.Shared.Next(0,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }

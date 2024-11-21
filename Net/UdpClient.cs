@@ -211,17 +211,17 @@ namespace CustomProtocol.Net
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
         
-        public async Task SendFile(string filePath,uint fragmentSize = 4)
+        public async Task SendFile(string filePath,uint fragmentSize = 4,bool err=false)
         {
             string filename = Path.GetFileName(filePath);
             Console.WriteLine(filename);
-            await SendMessage([..Encoding.ASCII.GetBytes(filename), ..(await File.ReadAllBytesAsync(filePath))], fragmentSize, true, (UInt16)filename.Length);
+            await SendMessage([..Encoding.ASCII.GetBytes(filename), ..(await File.ReadAllBytesAsync(filePath))], fragmentSize, true, (UInt16)filename.Length, err);
         }
-        public async Task SendText(string text, uint fragmentSize = 4)
+        public async Task SendText(string text, uint fragmentSize = 4,bool err=false)
         {
-            await SendMessage(Encoding.ASCII.GetBytes(text), fragmentSize);
+            await SendMessage(Encoding.ASCII.GetBytes(text), fragmentSize, err:err);
         }
-        public async Task SendMessage(byte[] bytes, uint fragmentSize = 4, bool isFile=false, UInt16 filenameOffset=0)
+        public async Task SendMessage(byte[] bytes, uint fragmentSize = 4, bool isFile=false, UInt16 filenameOffset=0, bool err=false)
         {
             Console.WriteLine("sending");
             _connection.StartTransmission();
@@ -275,7 +275,7 @@ namespace CustomProtocol.Net
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
                     Console.WriteLine($"Sending portion {i}");
-                    await StartSendingFragments(fragmentsToSend[i], id);
+                    await StartSendingFragments(fragmentsToSend[i], id, err);
                     
                     currentFragmentListIndex++;
                 }
@@ -296,7 +296,7 @@ namespace CustomProtocol.Net
         private int _windowSize = 10;
 
         private Dictionary<UInt16,List<CustomProtocolMessage>> _currentFragmentsPortions = new Dictionary<ushort, List<CustomProtocolMessage>>();
-        private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id)
+        private async Task StartSendingFragments(List<CustomProtocolMessage> currentFragmentsPortion, UInt16 id, bool err=false)
         {
             _currentFragmentsPortions[id] = currentFragmentsPortion;
             int currentWindowStart = 0;
@@ -320,7 +320,7 @@ namespace CustomProtocol.Net
                     return;
                 }
 
-                await _connection.SendMessage(currentFragmentsPortion[i]);
+                await _connection.SendMessage(currentFragmentsPortion[i], err);
                
                 
             }
@@ -357,7 +357,7 @@ namespace CustomProtocol.Net
                     {
                         return;   
                     }
-                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], true);
+                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
                  //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
