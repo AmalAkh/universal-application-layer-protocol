@@ -85,7 +85,7 @@ namespace CustomProtocol.Net
                         incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
                     }catch(DamagedMessageException e)
                     {
-                        //Console.WriteLine("Fragment damaged");
+                        Console.WriteLine($"Fragment #{incomingMessage.SequenceNumber} damaged");
                         continue;
                     }
                     if(_connection.IsConnectionTimeout)
@@ -130,7 +130,7 @@ namespace CustomProtocol.Net
                     }else if(incomingMessage.Syn && _connection.Status == ConnectionStatus.Connected)
                     {
                         await _connection.SendMessage(_currentFragmentsPortions[incomingMessage.Id][incomingMessage.SequenceNumber]);
-                        Console.WriteLine($"Resend {incomingMessage.SequenceNumber}");
+                        //Console.WriteLine($"Resend {incomingMessage.SequenceNumber}");
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
                        // Console.WriteLine(_listeningSocket.Available);
@@ -171,11 +171,15 @@ namespace CustomProtocol.Net
             {
                 _connection.StartTransmission();
                 StartCheckingUndeliveredFragments(incomingMessage.Id);
+                Console.WriteLine("");
+                Console.WriteLine("Incoming message...");
             }
             if(!_fragmentManager.AddFragment(incomingMessage))
             {
                 return;
             }
+
+            Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber}");
             
 
             if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
@@ -183,6 +187,9 @@ namespace CustomProtocol.Net
                 _connection.StopTransmission();
                 _fragmentManager.StopWatch(incomingMessage.Id);
                 StopCheckingUndeliveredFragments(incomingMessage.Id);
+
+                Console.WriteLine($"The fragment size: {_fragmentManager.GetFragmentSize(incomingMessage.Id) } bytes");
+                Console.WriteLine($"The last fragment size: {_fragmentManager.GetLastFragmentSize(incomingMessage.Id)} bytes");
                 if(!incomingMessage.IsFile)
                 {
                     Console.WriteLine("New message:");
@@ -191,11 +198,11 @@ namespace CustomProtocol.Net
                 }else
                 {
                     Console.WriteLine("File received");
-                    Console.WriteLine("File saved:");
+                    Console.WriteLine("File saved here:");
                     Console.WriteLine(await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id));
                     
                 }
-                Console.WriteLine("Time:");
+                Console.Write("Time:");
                 Console.WriteLine(_fragmentManager.GetTransmissionTime(incomingMessage.Id));
                 _fragmentManager.ClearMessages(incomingMessage.Id);
 
@@ -214,7 +221,7 @@ namespace CustomProtocol.Net
         public async Task SendFile(string filePath,uint fragmentSize = 4,bool err=false)
         {
             string filename = Path.GetFileName(filePath);
-            Console.WriteLine(filename);
+           
             await SendMessage([..Encoding.ASCII.GetBytes(filename), ..(await File.ReadAllBytesAsync(filePath))], fragmentSize, true, (UInt16)filename.Length, err);
         }
         public async Task SendText(string text, uint fragmentSize = 4,bool err=false)
@@ -223,7 +230,7 @@ namespace CustomProtocol.Net
         }
         public async Task SendMessage(byte[] bytes, uint fragmentSize = 4, bool isFile=false, UInt16 filenameOffset=0, bool err=false)
         {
-            Console.WriteLine("sending");
+            Console.WriteLine($"Fragment size: {fragmentSize} bytes");
             _connection.StartTransmission();
             UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
             
@@ -235,9 +242,16 @@ namespace CustomProtocol.Net
             {
                 
                 List<List<CustomProtocolMessage>> fragmentsToSend = _fragmentManager.CreateFragments(bytes,id, fragmentSize, filenameOffset, isFile);
+                int fragmentsCount = 0;
+                foreach(var list in fragmentsToSend)
+                {
+                    fragmentsCount += list.Count;
+                }
+                
+                Console.WriteLine($"Fragments to send: {fragmentsCount}");
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
-                    Console.WriteLine($"Sending portion {i}");
+                 //   Console.WriteLine($"Sending portion {i}");
                     await StartSendingFragments(fragmentsToSend[i], id, err);
                    
                 }
@@ -281,7 +295,10 @@ namespace CustomProtocol.Net
                 {
                     return;
                 }
-
+                if(currentFragmentsPortion[previousWindowEnd].Last)
+                {
+                    Console.WriteLine($"The last fragment size: {currentFragmentsPortion[previousWindowEnd].Data.Length} bytes");
+                }
                 await _connection.SendMessage(currentFragmentsPortion[i], err);
                
                 
@@ -313,7 +330,7 @@ namespace CustomProtocol.Net
                     }
                     if(currentFragmentsPortion[previousWindowEnd].Last)
                     {
-                        Console.WriteLine("Last fragment");
+                        Console.WriteLine($"The last fragment size {currentFragmentsPortion[previousWindowEnd].Data.Length} bytes");
                     }
                     if(_connection.Status == ConnectionStatus.Unconnected)
                     {
@@ -389,7 +406,7 @@ namespace CustomProtocol.Net
                     overralTime+=delay;
                     if(c >= 50)
                     {
-                        Console.WriteLine($"Resedning fragment #{seqNum}");
+                      //  Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
                       
                         c = 0;
@@ -420,13 +437,13 @@ namespace CustomProtocol.Net
                      //   Console.WriteLine(_fragmentManager.GetUndeliveredFragments(id).Count);
                         foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))
                         {   
-                            Console.WriteLine($"Requested {sequenceNumber}");
+                            //Console.WriteLine($"Requested {sequenceNumber}");
                             await _connection.MakeRepeatRequest(sequenceNumber, id);
                         }
                     }
                 }catch(OperationCanceledException e)
                 {
-                    Console.WriteLine("Checking stopped");
+                   // Console.WriteLine("Checking stopped");
                 }
             },_checkingUndeliveredFragmentsCancellationTokenSources[id].Token);
 

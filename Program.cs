@@ -71,10 +71,10 @@ while(true)
     {
         Dictionary<string, string> options = CLIArgsParser.Parse(command);
         uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
-        Console.WriteLine(fragmentSize);
+      
         Console.Write("Enter message:");
         string text = Console.ReadLine();
-        Console.WriteLine(text);
+    
         await udpClient.SendText(text, fragmentSize);
     }else if(command.StartsWith("sendfile"))
     {
@@ -82,8 +82,6 @@ while(true)
         Dictionary<string, string> options = CLIArgsParser.Parse(command, 2);
         uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
         bool err = options.ContainsKey("-err");
-
-        Console.WriteLine(fragmentSize);
        
 
    

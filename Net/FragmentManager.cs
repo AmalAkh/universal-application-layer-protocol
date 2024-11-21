@@ -36,7 +36,18 @@ namespace CustomProtocol.Net
                 _savePath = value;
             }
         }
-        
+        public int GetLastFragmentSize(ushort id)
+        {
+            return _fragmentedMessages[id].Where((msg)=>msg.Last).First().Data.Length;
+        }
+        public int GetFragmentSize(ushort id)
+        {
+            return _fragmentedMessages[id][0].Data.Length;
+        }
+        public int GetFragmentsCount(ushort id)
+        {
+            return _fragmentedMessages.Count;
+        }
         public bool IsFirstFragment(UInt16 id)
         {
             return _fragmentedMessages.Count == 0;
@@ -168,7 +179,7 @@ namespace CustomProtocol.Net
                 }
             }
             
-            Console.WriteLine("New message:");
+          
             return Encoding.ASCII.GetString(defragmentedBytes.ToArray());
             
         }

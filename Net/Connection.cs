@@ -127,12 +127,12 @@ namespace CustomProtocol.Net
         }
         public void StartTransmission()
         {
-            Console.WriteLine("transmission");
+            
             _transmissions++;
         }
         public void StopTransmission()
         {
-            Console.WriteLine("no transmission");
+            
             
             _transmissions--;
         }
@@ -198,7 +198,7 @@ namespace CustomProtocol.Net
                 }, _pingPongCancellationTokenSource.Token);
             }catch(OperationCanceledException)
             {
-                Console.WriteLine("Ping pong task stopped");
+               // Console.WriteLine("Ping pong task stopped");
             }
         }
         public async Task SendKeepAliveMessage()
@@ -248,9 +248,10 @@ namespace CustomProtocol.Net
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
             byte[] bytes = message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.9999)
+            if(err && Random.Shared.NextDouble() > 0.999)
             {
-                bytes[Random.Shared.Next(0,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
+                Console.WriteLine($"Error {message.SequenceNumber}");
+                bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }
@@ -340,7 +341,7 @@ namespace CustomProtocol.Net
         }
         public async Task InterruptConnection()
         {
-            Console.WriteLine("Connection intr");
+            Console.WriteLine("Connection interrupted");
             StopSendingKeepAlive();
             _unrespondedPingPongRequests = 0;
             _status = ConnectionStatus.Unconnected;
