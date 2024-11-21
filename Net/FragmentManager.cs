@@ -9,6 +9,9 @@ namespace CustomProtocol.Net
 {
     public class FragmentManager
     {
+
+
+
         private Dictionary<uint, HashSet<uint>> _receivedSequenceNumbers = new Dictionary<uint, HashSet<uint>>();
         private Dictionary<uint, int> _portionsCounts = new Dictionary<uint, int>();
 
@@ -20,6 +23,20 @@ namespace CustomProtocol.Net
     
         private Dictionary<UInt16, HashSet<UInt16>> _undeliveredFragments = new Dictionary<ushort, HashSet<ushort>>();
 
+
+        private string _savePath = "";
+        public string SavePath
+        {
+            get
+            {
+                return _savePath;
+            }
+            set
+            {
+                _savePath = value;
+            }
+        }
+        
         public bool IsFirstFragment(UInt16 id)
         {
             return _fragmentedMessages.Count == 0;
@@ -169,17 +186,19 @@ namespace CustomProtocol.Net
                     defragmentedBytes.Add(oneByte);
                 }
             } 
+
+            
             int filenameOffset = _fragmentedMessages[id].Where((msg,index)=>index==0).Select((msg)=>msg.FilenameOffset).FirstOrDefault();
             string filename = Encoding.ASCII.GetString(defragmentedBytes.Take(filenameOffset).ToArray());  
-            
-            using(FileStream fileStream = new FileStream(Path.Combine("./received_files/", filename), FileMode.Create, FileAccess.Write))
+            string pathToSave = Path.Combine(SavePath, filename);
+            using(FileStream fileStream = new FileStream(pathToSave, FileMode.Create, FileAccess.Write))
             {
                
                 await fileStream.WriteAsync(defragmentedBytes.Take(new Range(filenameOffset, defragmentedBytes.Count)).ToArray());
             }
             
-            Console.WriteLine(filename);
-            return filename;
+            
+            return Path.GetFullPath(pathToSave);
             
         }
         public List<List<CustomProtocolMessage>> CreateFragments(byte[] bytes, UInt16 id,uint fragmentSize=4)

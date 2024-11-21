@@ -30,6 +30,14 @@ namespace CustomProtocol.Net
         {
            
         }
+        public void SetPath(string path)
+        {
+            _fragmentManager.SavePath = path;
+        }
+        public bool IsPathEmpty
+        {
+            get{return _fragmentManager.SavePath == "";}
+        }
         
         public void Start(string address, ushort listeningPort, ushort sendingPort)
         {
@@ -183,7 +191,8 @@ namespace CustomProtocol.Net
                 }else
                 {
                     Console.WriteLine("File received");
-                    await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id);
+                    Console.WriteLine("File saved:");
+                    Console.WriteLine(await _fragmentManager.SaveFragmentsAsFile(incomingMessage.Id));
                     
                 }
                 Console.WriteLine("Time:");

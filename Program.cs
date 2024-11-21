@@ -2,6 +2,7 @@
 using CustomProtocol.Net;
 using System.Net;
 using System.Text;
+using System.Net.Sockets;
 
 Console.WriteLine("Write commands");
 
@@ -17,27 +18,27 @@ var msg2 = CustomProtocolMessage.FromBytes(msg.ToByteArray());
 
 
 
-CustomUdpClient udpServer = new CustomUdpClient ();
+CustomUdpClient udpClient = new CustomUdpClient ();
 Console.Write("Enter address for listening:");
 string address = Console.ReadLine();
 if(address == "t1")
 {
-    udpServer.Start("127.0.0.1", 5050,8080);
+    udpClient.Start("127.0.0.1", 5050,8080);
 }else if(address == "t2"){
-    udpServer.Start("127.0.0.1", 5656,6565);
-    await udpServer.Connect(5050, "127.0.0.1");
+    udpClient.Start("127.0.0.1", 5656,6565);
+    await udpClient.Connect(5050, "127.0.0.1");
 }
 else if(address == "t24"){
-    udpServer.Start("127.0.0.1", 5656,6565);
-    await udpServer.Connect(5050, "127.0.0.1");
-   // await udpServer.SendFile()
+    udpClient.Start("127.0.0.1", 5656,6565);
+    await udpClient.Connect(5050, "127.0.0.1");
+   // await udpClient.SendFile()
 }
 else if(address == "t3"){
-    udpServer.Start("192.168.1.40", 10080,10080);
+    udpClient.Start("192.168.1.40", 10080,10080);
 
 }else if(address == "t4")
 {
-    udpServer.Start("192.168.1.68", 5050,8080);
+    udpClient.Start("192.168.1.68", 5050,8080);
     
 }else
 {
@@ -46,17 +47,17 @@ else if(address == "t3"){
     Console.Write("Enter port for sending:");
     ushort sendingPort = Convert.ToUInt16(Console.ReadLine());
   
-    udpServer.Start(address, listeningPort, sendingPort);
+    udpClient.Start(address, listeningPort, sendingPort);
 }
 
-//udpServer.Start("127.0.0.1", 5050, 9911);
-//udpServer.Start("127.0.0.1", listeningPort, sendingPort);
+//udpClient.Start("127.0.0.1", 5050, 9911);
+//udpClient.Start("127.0.0.1", listeningPort, sendingPort);
 
 
 
 while(true)
 {
-    string command = Console.ReadLine();
+    string command = Console.ReadLine().Trim().Replace("  ", " ");
     
     if(command.StartsWith("connect"))
     {
@@ -64,7 +65,7 @@ while(true)
         string[] splitedCommand = command.Split(" ");
         string[] targetIPAndPort = splitedCommand[1].Split(":");
       
-        await udpServer.Connect(Convert.ToUInt16(targetIPAndPort[1]),targetIPAndPort[0]);
+        await udpClient.Connect(Convert.ToUInt16(targetIPAndPort[1]),targetIPAndPort[0]);
 
     }else if(command.StartsWith("sendtext"))
     {
@@ -74,7 +75,7 @@ while(true)
         Console.Write("Enter message:");
         string text = Console.ReadLine();
         Console.WriteLine(text);
-        await udpServer.SendText(text, fragmentSize);
+        await udpClient.SendText(text, fragmentSize);
     }else if(command.StartsWith("sendfile"))
     {
 
@@ -83,12 +84,28 @@ while(true)
         Console.WriteLine(fragmentSize);
 
    
-        await udpServer.SendFile(command.Split(" ")[1], fragmentSize);
+        await udpClient.SendFile(command.Split(" ")[1], fragmentSize);
     }
     else if(command.StartsWith("disconnect"))
     {
-        await udpServer.Disconnect();
-    }else
+        await udpClient.Disconnect();
+    }
+    else if(command.StartsWith("savepath"))
+    {
+        string path = command.Split(" ")[1];
+
+        if(Directory.Exists(path))
+        {
+            udpClient.SetPath(path);
+            Console.WriteLine("Save path saved");
+        }else
+        {
+            Console.WriteLine("Path does not exists");
+        }
+
+
+    }
+    else
     {
         Console.WriteLine("Unknown command");
     }
