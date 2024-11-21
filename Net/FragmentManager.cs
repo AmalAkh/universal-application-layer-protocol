@@ -201,43 +201,51 @@ namespace CustomProtocol.Net
             return Path.GetFullPath(pathToSave);
             
         }
-        public List<List<CustomProtocolMessage>> CreateFragments(byte[] bytes, UInt16 id,uint fragmentSize=4)
+        public List<List<CustomProtocolMessage>> CreateFragments(byte[] bytes, UInt16 id, uint fragmentSize,ushort filenameOffset, bool isFile)
         {
             List<List<CustomProtocolMessage>> fragmentsToSend = new List<List<CustomProtocolMessage>>();
-            UInt16 seqNum = 0;
+          
             int currentFragmentListIndex = 0;
+            int count = 0;
             fragmentsToSend.Add(new List<CustomProtocolMessage>());
-            for(ushort i = 0; i < bytes.Length; i+=(ushort)fragmentSize)
+            UInt16 seqNum = 0;
+            for(int i = 0; i < bytes.Length; i+=(int)fragmentSize)
             {   
                 
                 
                 CustomProtocolMessage message = CreateFragment(bytes, i, fragmentSize);
+                message.IsFile = isFile;
+                message.FilenameOffset = filenameOffset;
                 message.SequenceNumber = seqNum;
-                message.Id = id;
+                message.Id = id;    
+                
 
                 fragmentsToSend[currentFragmentListIndex].Add(message);
-
+                count++;
                 if(seqNum == UInt16.MaxValue)
                 {
                     fragmentsToSend.Add(new List<CustomProtocolMessage>());
                     
                     currentFragmentListIndex+=1;
                     seqNum = 0;
+                    
                 }else
                 {
                     seqNum++;
                 }
 
             }
+            
             return fragmentsToSend;
+
         }
-        public CustomProtocolMessage CreateFragment(byte[] bytes, UInt16 start, uint fragmentSize)
+        public CustomProtocolMessage CreateFragment(byte[] bytes, int start, uint fragmentSize)
         {
             CustomProtocolMessage message = new CustomProtocolMessage();
             
             int end = (int)(start+fragmentSize);
         
-            if(end > bytes.Length)
+            if(end > bytes.Length-1)
             {
                 message.SetFlag(CustomProtocolFlag.Last, true);
             }
