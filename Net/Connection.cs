@@ -220,7 +220,7 @@ namespace CustomProtocol.Net
                     await SendKeepAliveMessage();
                     
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(5000);
+                    await Task.Delay(3000);
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
                     Console.WriteLine("Time!!!");
                     await InterruptConnection();
