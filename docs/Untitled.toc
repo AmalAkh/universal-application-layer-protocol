@@ -1,0 +1,13 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{2}{}%
+\contentsline {section}{\numberline {2}Protocol header}{2}{}%
+\contentsline {section}{\numberline {3}Establishing and terminating connection}{3}{}%
+\contentsline {subsection}{\numberline {3.1}Establishing connection}{3}{}%
+\contentsline {subsection}{\numberline {3.2}Terminating connection}{3}{}%
+\contentsline {section}{\numberline {4}Keep-Alive}{4}{}%
+\contentsline {section}{\numberline {5}Data integrity}{4}{}%
+\contentsline {subsection}{\numberline {5.1}CRC16}{4}{}%
+\contentsline {subsection}{\numberline {5.2}Selective repeat ARQ}{5}{}%
+\contentsline {section}{\numberline {6}Program interface}{7}{}%
+\contentsline {subsection}{\numberline {6.1}Compile and run}{7}{}%
+\contentsline {subsection}{\numberline {6.2}Usage}{7}{}%
