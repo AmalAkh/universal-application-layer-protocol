@@ -85,7 +85,7 @@ namespace CustomProtocol.Net
                         incomingMessage = CustomProtocolMessage.FromBytes(bytes.Take(receiveFromResult.ReceivedBytes).ToArray());
                     }catch(DamagedMessageException e)
                     {
-                        Console.WriteLine($"Fragment #{incomingMessage.SequenceNumber} damaged");
+                        Console.WriteLine($"Fragment #{e.Message.SequenceNumber} damaged");
                         continue;
                     }
                     if(_connection.IsConnectionTimeout)
@@ -179,7 +179,7 @@ namespace CustomProtocol.Net
                 return;
             }
 
-            Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber}");
+           // Console.WriteLine($"Received fragment #{incomingMessage.SequenceNumber}");
             
 
             if(_fragmentManager.CheckDeliveryCompletion(incomingMessage.Id))
@@ -232,7 +232,7 @@ namespace CustomProtocol.Net
         {
             Console.WriteLine($"Fragment size: {fragmentSize} bytes");
             _connection.StartTransmission();
-            UInt16 id = (UInt16)Random.Shared.Next(0,UInt16.MaxValue);
+            UInt16 id = (UInt16)Random.Shared.Next(1,UInt16.MaxValue);
             
             _unAcknowledgedMessages.Add(id, new List<uint>());
             int currentWindowStart = 0;
@@ -277,7 +277,12 @@ namespace CustomProtocol.Net
             _currentFragmentsPortions[id] = currentFragmentsPortion;
             int currentWindowStart = 0;
             int currentWindowEnd = currentWindowStart+_windowSize-1;
-            int previousWindowEnd = currentWindowStart+_windowSize-1;
+            int previousWindowEnd = currentWindowStart+_windowSize-1;   
+
+            bool errAdded = false;
+            int seqNumForError = Random.Shared.Next(0,currentFragmentsPortion.Count);
+
+
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
@@ -299,7 +304,17 @@ namespace CustomProtocol.Net
                 {
                     Console.WriteLine($"The last fragment size: {currentFragmentsPortion[previousWindowEnd].Data.Length} bytes");
                 }
-                await _connection.SendMessage(currentFragmentsPortion[i], err);
+                if(err && !errAdded && seqNumForError == previousWindowEnd)
+                {
+                    errAdded = true;
+                    Console.WriteLine($"at least one {seqNumForError}");
+                    await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
+
+                }else
+                {
+                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
+                }
+               
                
                 
             }
@@ -315,11 +330,11 @@ namespace CustomProtocol.Net
                 previousWindowEnd = Int32.Max(currentWindowEnd, previousWindowEnd);
                 currentWindowEnd = currentWindowStart+_windowSize-1;
               
-                int previousWindowEndInitial = previousWindowEnd;
+                
                 for(;previousWindowEnd <= currentWindowEnd && previousWindowEnd < currentFragmentsPortion.Count;previousWindowEnd++)
                 {
                     
-                 
+                    
                     //Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
                     try
                     {
@@ -336,7 +351,18 @@ namespace CustomProtocol.Net
                     {
                         return;   
                     }
-                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
+                    if(err && !errAdded && seqNumForError == previousWindowEnd)
+                    {
+                        errAdded = true;
+                        Console.WriteLine($"at least one {seqNumForError}");
+                        
+                        await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
+
+                    }else
+                    {
+                        await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
+                    }
+                    
                  //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }

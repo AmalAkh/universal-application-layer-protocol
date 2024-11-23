@@ -152,7 +152,7 @@ namespace CustomProtocol.Net
             message.Data = bytes.Take(new Range(7, bytes.Length -2)).ToArray<byte>();
             if(CRC16Implementation.Compute(bytes) != 0)
             {
-                throw new DamagedMessageException();
+                throw new DamagedMessageException(message);
             }
             message.CheckSum =  BitConverter.ToUInt16(new ReadOnlySpan<byte>(bytes, bytes.Length-2,2));
            

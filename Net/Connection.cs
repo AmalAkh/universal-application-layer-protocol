@@ -255,6 +255,15 @@ namespace CustomProtocol.Net
             }
             await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }
+        public async Task SendMessageWithError(CustomProtocolMessage message)
+        {   
+            byte[] bytes = message.ToByteArray();
+            
+        //    Console.WriteLine($"Error {message.SequenceNumber}");
+            bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
+            
+            await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
+        }
         
      
         public async Task MakeRepeatRequest(UInt16 sequenceNumber, UInt16 id)
