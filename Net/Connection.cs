@@ -248,7 +248,7 @@ namespace CustomProtocol.Net
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
             byte[] bytes = message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.999)
+            if(err && Random.Shared.NextDouble() > 0.9999)
             {
                 Console.WriteLine($"Error {message.SequenceNumber}");
                 bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
