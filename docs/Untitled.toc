@@ -1,7 +1,8 @@
 \babel@toc {english}{}\relax 
 \contentsline {section}{\numberline {1}Introduction}{2}{}%
 \contentsline {section}{\numberline {2}Protocol header}{3}{}%
-\contentsline {subsection}{\numberline {2.1}Sequence Number excess}{3}{}%
+\contentsline {subsection}{\numberline {2.1}Structure}{3}{}%
+\contentsline {subsection}{\numberline {2.2}Sequence Number excess}{4}{}%
 \contentsline {section}{\numberline {3}Establishing and terminating connection}{5}{}%
 \contentsline {subsection}{\numberline {3.1}Establishing connection}{5}{}%
 \contentsline {subsection}{\numberline {3.2}Terminating connection}{5}{}%
@@ -9,9 +10,11 @@
 \contentsline {section}{\numberline {5}Error simulation}{7}{}%
 \contentsline {section}{\numberline {6}Data integrity}{8}{}%
 \contentsline {subsection}{\numberline {6.1}CRC16}{8}{}%
-\contentsline {section}{\numberline {7}Selective repeat ARQ}{8}{}%
-\contentsline {subsection}{\numberline {7.1}Dynamic window}{9}{}%
-\contentsline {section}{\numberline {8}Program interface}{10}{}%
-\contentsline {subsection}{\numberline {8.1}Compile and run}{10}{}%
-\contentsline {subsection}{\numberline {8.2}Usage}{10}{}%
-\contentsline {section}{\numberline {9}Appendix}{11}{}%
+\contentsline {subsection}{\numberline {6.2}Acknowledgements}{8}{}%
+\contentsline {section}{\numberline {7}Selective repeat ARQ}{9}{}%
+\contentsline {subsection}{\numberline {7.1}Description}{9}{}%
+\contentsline {subsection}{\numberline {7.2}Dynamic window}{10}{}%
+\contentsline {section}{\numberline {8}Program interface}{11}{}%
+\contentsline {subsection}{\numberline {8.1}Compile and run}{11}{}%
+\contentsline {subsection}{\numberline {8.2}Usage}{11}{}%
+\contentsline {section}{\numberline {9}Diagrams}{12}{}%
