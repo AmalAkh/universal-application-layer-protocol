@@ -300,19 +300,19 @@ namespace CustomProtocol.Net
                 {
                     return;
                 }
-                if(currentFragmentsPortion[previousWindowEnd].Last)
+                if(currentFragmentsPortion[i].Last)
                 {
-                    Console.WriteLine($"The last fragment size: {currentFragmentsPortion[previousWindowEnd].Data.Length} bytes");
+                    Console.WriteLine($"The last fragment size: {currentFragmentsPortion[i].Data.Length} bytes");
                 }
-                if(err && !errAdded && seqNumForError == previousWindowEnd)
+                if(err && !errAdded && seqNumForError == i)
                 {
                     errAdded = true;
                     Console.WriteLine($"at least one {seqNumForError}");
-                    await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
+                    await _connection.SendMessageWithError(currentFragmentsPortion[i]);
 
                 }else
                 {
-                    await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
+                    await _connection.SendMessage(currentFragmentsPortion[i], err);
                 }
                
                
@@ -383,7 +383,7 @@ namespace CustomProtocol.Net
          
             
         }
-        int _rttThreshold = 350;
+        int _rttThreshold = 200;
         private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
             int delay = 50;
@@ -430,7 +430,7 @@ namespace CustomProtocol.Net
                     
                     
                     overralTime+=delay;
-                    if(c >= 50)
+                    if(c >= 40)
                     {
                       //  Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
