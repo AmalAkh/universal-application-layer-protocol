@@ -23,7 +23,7 @@ namespace CustomProtocol.Net
     
         private Dictionary<UInt16, HashSet<UInt16>> _undeliveredFragments = new Dictionary<ushort, HashSet<ushort>>();
 
-
+   
         private string _savePath = "";
         public string SavePath
         {
@@ -137,8 +137,8 @@ namespace CustomProtocol.Net
                 if(!_receivedSequenceNumbers[incomingMessage.Id].Contains((UInt16)i))
                 {   
                     
-                    _undeliveredFragments[incomingMessage.Id].Add((UInt16)i);
-                    
+                    //_undeliveredFragments[incomingMessage.Id].Add((UInt16)i);
+                    FragmentLost?.Invoke(incomingMessage.Id, incomingMessage.SequenceNumber);
                 }else
                 {
                    

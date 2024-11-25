@@ -50,6 +50,11 @@ namespace CustomProtocol.Net
             
             _connection = new Connection(_listeningSocket, _sendingSocket);
             _connection.Interrupted+= InterruptConnection;
+            _fragmentManager.FragmentLost+= async (id, sequnceNumber)=>
+            {
+                await _connection.MakeRepeatRequest(id, sequnceNumber);
+
+            };
             StartCheckingConnection();
             
 
@@ -150,13 +155,17 @@ namespace CustomProtocol.Net
                 while(true)
                 {
                     await Task.Delay(500);
-                    
+                    if(!_connection.IsTransmitting)
+                    {
+                        _lastMessageTime = DateTime.Now;
+                    }
                     if(_connection.IsTransmitting && _connection.Status != ConnectionStatus.Unconnected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 3)
                     {
                         Console.WriteLine("Emergency check");
                         await _connection.EmergencyCheck();
 
                     }
+                
                 }
                 
             });
@@ -170,7 +179,7 @@ namespace CustomProtocol.Net
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
                 _connection.StartTransmission();
-                StartCheckingUndeliveredFragments(incomingMessage.Id);
+              //  StartCheckingUndeliveredFragments(incomingMessage.Id);
                 Console.WriteLine("");
                 Console.WriteLine("Incoming message...");
             }
@@ -186,7 +195,7 @@ namespace CustomProtocol.Net
             {
                 _connection.StopTransmission();
                 _fragmentManager.StopWatch(incomingMessage.Id);
-                StopCheckingUndeliveredFragments(incomingMessage.Id);
+              //  StopCheckingUndeliveredFragments(incomingMessage.Id);
 
                 Console.WriteLine($"The fragment size: {_fragmentManager.GetFragmentSize(incomingMessage.Id) } bytes");
                 Console.WriteLine($"The last fragment size: {_fragmentManager.GetLastFragmentSize(incomingMessage.Id)} bytes");
@@ -289,7 +298,7 @@ namespace CustomProtocol.Net
                 try
                 {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
-               // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
+              //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
                 }catch(KeyNotFoundException)
                 {
@@ -430,9 +439,9 @@ namespace CustomProtocol.Net
                     
                     
                     overralTime+=delay;
-                    if(c >= 40)
+                    if(c >= 20)
                     {
-                      //  Console.WriteLine($"Resedning fragment #{seqNum}");
+                        Console.WriteLine($"Resedning fragment #{seqNum}");
                         await _connection.SendMessage(fragments[(int)seqNum]);
                       
                         c = 0;

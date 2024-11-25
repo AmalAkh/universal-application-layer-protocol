@@ -191,14 +191,16 @@ namespace CustomProtocol.Net
                             _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         }
                         
-                    }
-                    Console.WriteLine("Disconnected from host");
+                    }//169.254.78.38
+                    Console.WriteLine("Ping pong");
+                    InterruptConnection();
+                   
                 
 
                 }, _pingPongCancellationTokenSource.Token);
             }catch(OperationCanceledException)
             {
-               // Console.WriteLine("Ping pong task stopped");
+                
             }
         }
         public async Task SendKeepAliveMessage()
@@ -220,9 +222,9 @@ namespace CustomProtocol.Net
                     await SendKeepAliveMessage();
                     
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(3000);
+                    await Task.Delay(5000);
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    Console.WriteLine("Time!!!");
+                    Console.WriteLine("Interrupteddddd");
                     await InterruptConnection();
 
                     
@@ -247,13 +249,19 @@ namespace CustomProtocol.Net
         }
         public async Task SendMessage(CustomProtocolMessage message, bool err = false)
         {   
-            byte[] bytes = message.ToByteArray();
-            if(err && Random.Shared.NextDouble() > 0.9999)
+            try
             {
-                Console.WriteLine($"Error {message.SequenceNumber}");
-                bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
+                byte[] bytes = message.ToByteArray();
+                if(err && Random.Shared.NextDouble() > 0.9999)
+                {
+                    Console.WriteLine($"Error {message.SequenceNumber}");
+                    bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
+                }
+                await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
+            }catch(SocketException e)
+            {
+                InterruptConnection();
             }
-            await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
         }
         public async Task SendMessageWithError(CustomProtocolMessage message)
         {   
@@ -350,7 +358,7 @@ namespace CustomProtocol.Net
         }
         public async Task InterruptConnection()
         {
-            Console.WriteLine("Connection interrupted");
+            
             StopSendingKeepAlive();
             _unrespondedPingPongRequests = 0;
             _status = ConnectionStatus.Unconnected;
