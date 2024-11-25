@@ -7,14 +7,14 @@
 \contentsline {subsection}{\numberline {3.1}Establishing connection}{5}{}%
 \contentsline {subsection}{\numberline {3.2}Terminating connection}{5}{}%
 \contentsline {section}{\numberline {4}Keep-Alive}{6}{}%
-\contentsline {section}{\numberline {5}Error simulation}{8}{}%
-\contentsline {section}{\numberline {6}Data integrity}{9}{}%
-\contentsline {subsection}{\numberline {6.1}CRC16}{9}{}%
-\contentsline {subsection}{\numberline {6.2}Acknowledgements}{9}{}%
-\contentsline {section}{\numberline {7}Selective repeat ARQ}{10}{}%
-\contentsline {subsection}{\numberline {7.1}Description}{10}{}%
-\contentsline {subsection}{\numberline {7.2}Dynamic window}{11}{}%
-\contentsline {section}{\numberline {8}Program interface}{12}{}%
-\contentsline {subsection}{\numberline {8.1}Compile and run}{12}{}%
-\contentsline {subsection}{\numberline {8.2}Usage}{12}{}%
-\contentsline {section}{\numberline {9}Diagrams}{13}{}%
+\contentsline {section}{\numberline {5}Error simulation}{7}{}%
+\contentsline {section}{\numberline {6}Data integrity}{8}{}%
+\contentsline {subsection}{\numberline {6.1}CRC16}{8}{}%
+\contentsline {subsection}{\numberline {6.2}Acknowledgements}{8}{}%
+\contentsline {section}{\numberline {7}Selective repeat ARQ}{9}{}%
+\contentsline {subsection}{\numberline {7.1}Description}{9}{}%
+\contentsline {subsection}{\numberline {7.2}Dynamic window}{10}{}%
+\contentsline {section}{\numberline {8}Program interface}{11}{}%
+\contentsline {subsection}{\numberline {8.1}Compile and run}{11}{}%
+\contentsline {subsection}{\numberline {8.2}Usage}{11}{}%
+\contentsline {section}{\numberline {9}Diagrams}{12}{}%

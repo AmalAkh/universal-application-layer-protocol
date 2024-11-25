@@ -72,8 +72,13 @@ while(true)
         Dictionary<string, string> options = CLIArgsParser.Parse(command);
         bool err = options.ContainsKey("-err");
 
-        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
-      
+        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 10;
+        if(fragmentSize > 1463)
+        {
+            Console.WriteLine("Fragment size is too big");
+            continue;
+
+        }
         Console.Write("Enter message:");
         string text = Console.ReadLine();
     
@@ -82,12 +87,22 @@ while(true)
     {
 
         Dictionary<string, string> options = CLIArgsParser.Parse(command, 2);
-        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 1;
+        uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 10;
+        string filename = command.Split(" ")[1];
         bool err = options.ContainsKey("-err");
-       
+        if(!Path.Exists(filename))
+        {
+            Console.WriteLine("File does not exist or you do not have right to access it");
+            continue;
+        }
+        if(fragmentSize > 1463)
+        {
+            Console.WriteLine("Fragment size is too big");
+            continue;
+        }
 
    
-        await udpClient.SendFile(command.Split(" ")[1], fragmentSize, err);
+        await udpClient.SendFile(filename, fragmentSize, err);
     }
     else if(command.StartsWith("disconnect"))
     {
@@ -103,7 +118,8 @@ while(true)
             Console.WriteLine("Save path saved");
         }else
         {
-            Console.WriteLine("Path does not exists");
+            Console.WriteLine("Path does not exist or you do not have right to access it");
+            
         }
 
 

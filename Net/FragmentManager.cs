@@ -200,7 +200,7 @@ namespace CustomProtocol.Net
                
                 await fileStream.WriteAsync(defragmentedBytes.Take(new Range(filenameOffset, defragmentedBytes.Count)).ToArray());
             }
-            
+            Console.WriteLine($"File size:{defragmentedBytes.Count-filenameOffset} bytes");
             
             return Path.GetFullPath(pathToSave);
             

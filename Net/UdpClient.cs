@@ -120,7 +120,7 @@ namespace CustomProtocol.Net
                         _connection.ReceiveKeepAliveResponse();
                         if(_connection.Status == ConnectionStatus.Emergency)
                         {
-                            Console.WriteLine($"Resolved {DateTime.Now.Subtract(_lastMessageTime).Seconds}");
+                            
                             _lastMessageTime = DateTime.Now;
                         
                             _connection.CancelEmergencyCheck();
@@ -240,8 +240,9 @@ namespace CustomProtocol.Net
         public async Task SendFile(string filePath,uint fragmentSize = 4,bool err=false)
         {
             string filename = Path.GetFileName(filePath);
-           
-            await SendMessage([..Encoding.ASCII.GetBytes(filename), ..(await File.ReadAllBytesAsync(filePath))], fragmentSize, true, (UInt16)filename.Length, err);
+            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+            Console.WriteLine($"File size:{fileBytes.Length} bytes");
+            await SendMessage([..Encoding.ASCII.GetBytes(filename), ..(fileBytes)], fragmentSize, true, (UInt16)filename.Length, err);
         }
         public async Task SendText(string text, uint fragmentSize = 4,bool err=false)
         {
@@ -249,6 +250,7 @@ namespace CustomProtocol.Net
         }
         public async Task SendMessage(byte[] bytes, uint fragmentSize = 4, bool isFile=false, UInt16 filenameOffset=0, bool err=false)
         {
+            Console.WriteLine("Sending message...");
             Console.WriteLine($"Fragment size: {fragmentSize} bytes");
             _connection.StartTransmission();
             UInt16 id = (UInt16)Random.Shared.Next(1,UInt16.MaxValue);
@@ -265,6 +267,10 @@ namespace CustomProtocol.Net
                 foreach(var list in fragmentsToSend)
                 {
                     fragmentsCount += list.Count;
+                    if(list.Count != 0 && list[list.Count-1].Last)
+                    {
+                        Console.WriteLine($"Last fragment size:{list[list.Count-1].Data.Length} bytes");
+                    }
                 }
                 
                 Console.WriteLine($"Fragments to send: {fragmentsCount}");
