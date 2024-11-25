@@ -52,7 +52,7 @@ namespace CustomProtocol.Net
             _connection.Interrupted+= InterruptConnection;
             _fragmentManager.FragmentLost+= async (id, sequnceNumber)=>
             {
-                await _connection.MakeRepeatRequest(id, sequnceNumber);
+                await _connection.MakeRepeatRequest(sequnceNumber, id);
 
             };
             StartCheckingConnection();
@@ -93,6 +93,8 @@ namespace CustomProtocol.Net
                         Console.WriteLine($"Fragment #{e.Message.SequenceNumber} damaged");
                         continue;
                     }
+
+                   
                     if(_connection.IsConnectionTimeout)
                     {   
                         await _connection.InterruptConnectionHandshake();
@@ -110,11 +112,16 @@ namespace CustomProtocol.Net
                     }else if(_connection.Status == ConnectionStatus.WaitingForOutgoingConnectionAck && incomingMessage.Ack && incomingMessage.Syn)
                     {
                         await _connection.EstablishOutgoingConnection(new IPEndPoint(senderEndPoint.Address, BitConverter.ToInt16(incomingMessage.Data) ));
-                    }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.KeepAlive)
+                    }else if((_connection.Status == ConnectionStatus.Connected || _connection.Status == ConnectionStatus.Emergency) && incomingMessage.KeepAlive && incomingMessage.Ack)
                     {
+                       
+
                         _connection.ReceiveKeepAliveResponse();
                         if(_connection.Status == ConnectionStatus.Emergency)
                         {
+                            Console.WriteLine($"Resolved {DateTime.Now.Subtract(_lastMessageTime).Seconds}");
+                            _lastMessageTime = DateTime.Now;
+                        
                             _connection.CancelEmergencyCheck();
                         }
                     }else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Finish)
@@ -123,18 +130,22 @@ namespace CustomProtocol.Net
                     }
                     else if(_connection.Status == ConnectionStatus.Connected && incomingMessage.Ack && !incomingMessage.Syn)
                     {
+                        _lastMessageTime = DateTime.Now;
                         if(_unAcknowledgedMessages.ContainsKey(incomingMessage.Id))
                         {
-                            _lastMessageTime = DateTime.Now;
+                            
                             _unAcknowledgedMessages[incomingMessage.Id].RemoveAll((seqNum)=>seqNum==incomingMessage.SequenceNumber);
 
                         }
-                    }else if(incomingMessage.KeepAlive)
+                    }else if(incomingMessage.KeepAlive && !incomingMessage.Ack)
                     {
+                        
                         await _connection.SendKeepAliveResponse();
                     }else if(incomingMessage.Syn && _connection.Status == ConnectionStatus.Connected)
                     {
+                       
                         await _connection.SendMessage(_currentFragmentsPortions[incomingMessage.Id][incomingMessage.SequenceNumber]);
+                        
                         //Console.WriteLine($"Resend {incomingMessage.SequenceNumber}");
                     }else if(_connection.Status == ConnectionStatus.Connected)
                     {
@@ -159,10 +170,13 @@ namespace CustomProtocol.Net
                     {
                         _lastMessageTime = DateTime.Now;
                     }
-                    if(_connection.IsTransmitting && _connection.Status != ConnectionStatus.Unconnected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 3)
+                   
+                   
+                    if(_connection.IsTransmitting && _connection.Status == ConnectionStatus.Connected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 5)
                     {
-                        Console.WriteLine("Emergency check");
-                        await _connection.EmergencyCheck();
+
+                        Console.WriteLine($"Checking connection...{DateTime.Now.Subtract(_lastMessageTime).Seconds}");
+                      //  await _connection.EmergencyCheck();
 
                     }
                 
@@ -173,13 +187,14 @@ namespace CustomProtocol.Net
         
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
-            _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             _lastMessageTime = DateTime.Now;
+            _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
+            
             // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
                 _connection.StartTransmission();
-              //  StartCheckingUndeliveredFragments(incomingMessage.Id);
+            
                 Console.WriteLine("");
                 Console.WriteLine("Incoming message...");
             }
@@ -217,13 +232,7 @@ namespace CustomProtocol.Net
 
             }
         }
-            
-          
-            
-            
-        
-        
-        
+
         
         private Dictionary<UInt16, List<uint>> _unAcknowledgedMessages = new Dictionary<UInt16, List<uint>>();
         
@@ -260,7 +269,7 @@ namespace CustomProtocol.Net
                 Console.WriteLine($"Fragments to send: {fragmentsCount}");
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
-                 //   Console.WriteLine($"Sending portion {i}");
+                    Console.WriteLine($"Sending portion {i}");
                     await StartSendingFragments(fragmentsToSend[i], id, err);
                    
                 }
@@ -298,7 +307,7 @@ namespace CustomProtocol.Net
                 try
                 {
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
-              //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
+             //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
                 }catch(KeyNotFoundException)
                 {
@@ -316,13 +325,15 @@ namespace CustomProtocol.Net
                 if(err && !errAdded && seqNumForError == i)
                 {
                     errAdded = true;
-                    Console.WriteLine($"at least one {seqNumForError}");
+               //     Console.WriteLine($"at least one {seqNumForError}");
                     await _connection.SendMessageWithError(currentFragmentsPortion[i]);
 
                 }else
                 {
                     await _connection.SendMessage(currentFragmentsPortion[i], err);
                 }
+                StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[i].SequenceNumber);
+
                
                
                 
@@ -333,7 +344,7 @@ namespace CustomProtocol.Net
                 {
                     return;
                 }
-                await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)currentWindowStart);
+                await WaitForFragmentAck(currentFragmentsPortion,id, (UInt32)currentWindowStart);
                 currentWindowStart+=1;
                 
                 previousWindowEnd = Int32.Max(currentWindowEnd, previousWindowEnd);
@@ -344,7 +355,7 @@ namespace CustomProtocol.Net
                 {
                     
                     
-                    //Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
+                  //  Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
                     try
                     {
                         _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
@@ -371,8 +382,9 @@ namespace CustomProtocol.Net
                     {
                         await _connection.SendMessage(currentFragmentsPortion[previousWindowEnd], err);
                     }
+                    StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[previousWindowEnd].SequenceNumber);
                     
-                 //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
+                   Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
                     
@@ -385,7 +397,7 @@ namespace CustomProtocol.Net
            
             for(int i = 0; i < currentWindowEnd;i++)
             {
-                await WaitForFirstInWindow(currentFragmentsPortion,id, (UInt32)(currentWindowStart+i));
+                await WaitForFragmentAck(currentFragmentsPortion,id, (UInt32)(currentWindowStart+i));
             }
 
             _unAcknowledgedMessages[id].Clear();
@@ -393,7 +405,7 @@ namespace CustomProtocol.Net
             
         }
         int _rttThreshold = 200;
-        private async Task WaitForFirstInWindow(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
+        private async Task WaitForFragmentAck(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
             int delay = 50;
             if(!_unAcknowledgedMessages[id].Contains(seqNum))
@@ -406,10 +418,12 @@ namespace CustomProtocol.Net
 
             await Task.Run(async()=>
             {
-                int c = 0;
+                
                 while(true)
                 {
                     await Task.Delay(delay);
+                 
+                   
                     if(_connection.Status == ConnectionStatus.Emergency)
                     {
                         continue;
@@ -418,36 +432,30 @@ namespace CustomProtocol.Net
                     {
                         return;
                     }
-                    c++;
+                 
                     if(!_unAcknowledgedMessages[id].Contains(seqNum))
                     {
                         if(_windowSize > 1 && overralTime > _rttThreshold)
                         {
                             _windowSize/=2;
+                            Console.WriteLine(_windowSize);
                            // Console.WriteLine($"Window decreased {_windowSize}");
                             
                           
                         }else if( overralTime <= _rttThreshold)
                         {
                             _windowSize++;
+                            Console.WriteLine(_windowSize);
                            
-                            //Console.WriteLine("Window increased");
+                           // Console.WriteLine("Window increased");
                         }
                         
                         return;
                     }
-                    
+                   
                     
                     overralTime+=delay;
-                    if(c >= 20)
-                    {
-                        Console.WriteLine($"Resedning fragment #{seqNum}");
-                        await _connection.SendMessage(fragments[(int)seqNum]);
-                      
-                        c = 0;
-                        
-
-                    }
+                    
                    
 
                     
@@ -456,40 +464,51 @@ namespace CustomProtocol.Net
             });
 
         }
-        Dictionary<UInt16, CancellationTokenSource> _checkingUndeliveredFragmentsCancellationTokenSources = new Dictionary<ushort, CancellationTokenSource>();
-        public async Task StartCheckingUndeliveredFragments(UInt16 id)
+        public async Task StartFragmentTimer(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
-            _checkingUndeliveredFragmentsCancellationTokenSources.Add(id, new CancellationTokenSource());
-            await Task.Run(async ()=>
+            int delay = 50;
+            if(!_unAcknowledgedMessages[id].Contains(seqNum))
             {
-                try
-                {
-                    while(true)
-                    {
-                        _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
-                        await Task.Delay(250);
-                        _checkingUndeliveredFragmentsCancellationTokenSources[id].Token.ThrowIfCancellationRequested();
-                     //   Console.WriteLine(_fragmentManager.GetUndeliveredFragments(id).Count);
-                        foreach(UInt16 sequenceNumber in _fragmentManager.GetUndeliveredFragments(id))
-                        {   
-                            //Console.WriteLine($"Requested {sequenceNumber}");
-                            await _connection.MakeRepeatRequest(sequenceNumber, id);
-                        }
-                    }
-                }catch(OperationCanceledException e)
-                {
-                   // Console.WriteLine("Checking stopped");
-                }
-            },_checkingUndeliveredFragmentsCancellationTokenSources[id].Token);
-
-        }
-        private void StopCheckingUndeliveredFragments(UInt16 id)
-        {
-            if(_checkingUndeliveredFragmentsCancellationTokenSources.ContainsKey(id))
-            {
-                _checkingUndeliveredFragmentsCancellationTokenSources[id].Cancel();
+             
+                return;
             }
+            
+           
+
+            await Task.Run(async()=>
+            {
+                int c = 0;
+                while(true)
+                {
+                    await Task.Delay(delay);
+                    c++;
+                   
+                    if(_connection.Status == ConnectionStatus.Emergency)
+                    {
+                        continue;
+                    }
+                    if(_connection.Status == ConnectionStatus.Unconnected)
+                    {
+                        return;
+                    }
+              
+                    if(c >= 60)
+                    {
+                    //    Console.WriteLine($"Resedning fragment from timer #{seqNum}");
+                      
+                        await _connection.SendMessage(fragments[(int)seqNum]);
+                        
+                        
+                        c = 0;
+
+                    }
+ 
+                }
+            });
         }
+
+        
+      
         
 
         public async Task Connect(ushort port, string address)
@@ -502,10 +521,7 @@ namespace CustomProtocol.Net
         {
             _fragmentManager.ClearAllMessages();
 
-            foreach(UInt16 id in _unAcknowledgedMessages.Keys)
-            {
-                StopCheckingUndeliveredFragments(id);
-            }
+           
             _unAcknowledgedMessages.Clear();
         }
         private void InterruptConnection()

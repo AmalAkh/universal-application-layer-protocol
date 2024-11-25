@@ -81,7 +81,7 @@ namespace CustomProtocol.Net
         {
             get
             {
-                return _transmissions != 0;
+                return _transmissions > 0;
             }
         }
         private int _currentConnectionTime = 0;
@@ -185,6 +185,7 @@ namespace CustomProtocol.Net
                         {
                             
                             await SendKeepAliveMessage();
+                          
                             _unrespondedPingPongRequests+=1;
                             _pingPongCancellationTokenSource.Token.ThrowIfCancellationRequested();
                             await Task.Delay(5000);
@@ -192,7 +193,7 @@ namespace CustomProtocol.Net
                         }
                         
                     }//169.254.78.38
-                    Console.WriteLine("Ping pong");
+                    
                     InterruptConnection();
                    
                 
@@ -207,22 +208,32 @@ namespace CustomProtocol.Net
         {
             CustomProtocolMessage pingMessage = new CustomProtocolMessage();
             pingMessage.SetFlag(CustomProtocolFlag.KeepAlive, true);
+           
+
             await _sendingSocket.SendToAsync(pingMessage.ToByteArray(), _currentEndPoint);
         }
         private CancellationTokenSource _emergenecyCheckCancellationTokenSource = new CancellationTokenSource();
         public async Task EmergencyCheck()
         {
+            
             _status = ConnectionStatus.Emergency;
             try
             {
                 await Task.Run(async ()=>
                 {
+                    int overralTime = 0;
+                   
                     await SendKeepAliveMessage();
                     await SendKeepAliveMessage();
                     await SendKeepAliveMessage();
                     
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(5000);
+                    while(overralTime <= 3000)
+                    {
+                        await Task.Delay(100);
+                        overralTime+=100;
+                        _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    }
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
                     Console.WriteLine("Interrupteddddd");
                     await InterruptConnection();
@@ -254,23 +265,31 @@ namespace CustomProtocol.Net
                 byte[] bytes = message.ToByteArray();
                 if(err && Random.Shared.NextDouble() > 0.9999)
                 {
-                    Console.WriteLine($"Error {message.SequenceNumber}");
+                   // Console.WriteLine($"Error {message.SequenceNumber}");
                     bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
                 }
                 await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
             }catch(SocketException e)
             {
+                Console.WriteLine($"Fatal error: {e.Message}");
                 InterruptConnection();
             }
         }
         public async Task SendMessageWithError(CustomProtocolMessage message)
         {   
-            byte[] bytes = message.ToByteArray();
-            
-        //    Console.WriteLine($"Error {message.SequenceNumber}");
-            bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
-            
-            await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
+            try
+            {
+                byte[] bytes = message.ToByteArray();
+                
+            //    Console.WriteLine($"Error {message.SequenceNumber}");
+                bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
+                
+                await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
+            }catch(SocketException e)
+            {
+                Console.WriteLine($"Fatal error: {e.Message}");
+                InterruptConnection();
+            }
         }
         
      
