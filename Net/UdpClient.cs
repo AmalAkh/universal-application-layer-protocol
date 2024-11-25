@@ -7,6 +7,7 @@ using System.Text;
 using System.Linq;
 using CustomProtocol.Net.Exceptions;
 using NUnit.Framework.Constraints;
+using System.Timers;
 
 
 namespace CustomProtocol.Net
@@ -297,35 +298,27 @@ namespace CustomProtocol.Net
             int currentWindowEnd = currentWindowStart+_windowSize-1;
             int previousWindowEnd = currentWindowStart+_windowSize-1;   
 
-            bool errAdded = false;
+           
             int seqNumForError = Random.Shared.Next(0,currentFragmentsPortion.Count);
-
+           
 
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-                try
-                {
+                
                 _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
              //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
-                }catch(KeyNotFoundException)
-                {
-                    return;
-                }
+                
 
                 if(_connection.Status == ConnectionStatus.Unconnected)
                 {
                     return;
                 }
-                if(currentFragmentsPortion[i].Last)
+                
+                if(err && seqNumForError == i)
                 {
-                    Console.WriteLine($"The last fragment size: {currentFragmentsPortion[i].Data.Length} bytes");
-                }
-                if(err && !errAdded && seqNumForError == i)
-                {
-                    errAdded = true;
-               //     Console.WriteLine($"at least one {seqNumForError}");
+                  
                     await _connection.SendMessageWithError(currentFragmentsPortion[i]);
 
                 }else
@@ -356,25 +349,18 @@ namespace CustomProtocol.Net
                     
                     
                   //  Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
-                    try
-                    {
-                        _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
-                    }catch(KeyNotFoundException e)
-                    {
-                        return;
-                    }
-                    if(currentFragmentsPortion[previousWindowEnd].Last)
-                    {
-                        Console.WriteLine($"The last fragment size {currentFragmentsPortion[previousWindowEnd].Data.Length} bytes");
-                    }
+                    
+                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
+                    
+                   
                     if(_connection.Status == ConnectionStatus.Unconnected)
                     {
                         return;   
                     }
-                    if(err && !errAdded && seqNumForError == previousWindowEnd)
+                    if(err && seqNumForError == previousWindowEnd)
                     {
-                        errAdded = true;
-                        Console.WriteLine($"at least one {seqNumForError}");
+                       
+                      //  Console.WriteLine($"at least one {seqNumForError}");
                         
                         await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
 
@@ -384,7 +370,7 @@ namespace CustomProtocol.Net
                     }
                     StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[previousWindowEnd].SequenceNumber);
                     
-                   Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
+               //     Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
                     
@@ -414,7 +400,7 @@ namespace CustomProtocol.Net
                 return;
             }
             int overralTime = 0;
-           
+            int c = 0;
 
             await Task.Run(async()=>
             {
@@ -422,7 +408,7 @@ namespace CustomProtocol.Net
                 while(true)
                 {
                     await Task.Delay(delay);
-                 
+                    c++;
                    
                     if(_connection.Status == ConnectionStatus.Emergency)
                     {
@@ -438,73 +424,47 @@ namespace CustomProtocol.Net
                         if(_windowSize > 1 && overralTime > _rttThreshold)
                         {
                             _windowSize/=2;
-                            Console.WriteLine(_windowSize);
+                           // Console.WriteLine(_windowSize);
                            // Console.WriteLine($"Window decreased {_windowSize}");
                             
                           
                         }else if( overralTime <= _rttThreshold)
                         {
                             _windowSize++;
-                            Console.WriteLine(_windowSize);
-                           
-                           // Console.WriteLine("Window increased");
+                        
                         }
                         
                         return;
                     }
-                   
                     
-                    overralTime+=delay;
                     
-                   
-
-                    
+                    overralTime+=delay;                
                     
                 }
             });
 
         }
-        public async Task StartFragmentTimer(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
+        private void StartFragmentTimer(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
-            int delay = 50;
-            if(!_unAcknowledgedMessages[id].Contains(seqNum))
-            {
-             
-                return;
-            }
-            
+            System.Timers.Timer timer = new Timers.Timer(1000);
            
-
-            await Task.Run(async()=>
+            timer.Elapsed += async delegate
             {
-                int c = 0;
-                while(true)
-                {
-                    await Task.Delay(delay);
-                    c++;
-                   
-                    if(_connection.Status == ConnectionStatus.Emergency)
-                    {
-                        continue;
-                    }
-                    if(_connection.Status == ConnectionStatus.Unconnected)
-                    {
-                        return;
-                    }
               
-                    if(c >= 60)
-                    {
-                    //    Console.WriteLine($"Resedning fragment from timer #{seqNum}");
-                      
-                        await _connection.SendMessage(fragments[(int)seqNum]);
-                        
-                        
-                        c = 0;
-
-                    }
- 
+                if(!_unAcknowledgedMessages[id].Contains(seqNum))
+                {
+                    timer.Stop();
+                    return;
                 }
-            });
+                else
+                {
+                    Console.WriteLine("Resend");
+                    await _connection.SendMessage(fragments[(int)seqNum]);
+                   
+                }
+            };
+            timer.Enabled = true;
+            timer.AutoReset = true;
         }
 
         
