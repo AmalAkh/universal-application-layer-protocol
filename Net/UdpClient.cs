@@ -276,7 +276,7 @@ namespace CustomProtocol.Net
                 Console.WriteLine($"Fragments to send: {fragmentsCount}");
                 for(int i = 0; i < fragmentsToSend.Count; i++)
                 {
-                    Console.WriteLine($"Sending portion {i}");
+                 
                     await StartSendingFragments(fragmentsToSend[i], id, err);
                    
                 }
@@ -315,7 +315,7 @@ namespace CustomProtocol.Net
                 {
                     _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
                 }
-             //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
+            //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
                 
 
@@ -379,7 +379,7 @@ namespace CustomProtocol.Net
                     }
                     StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[previousWindowEnd].SequenceNumber);
                     
-                //    Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
+                   // Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
                     
@@ -455,7 +455,7 @@ namespace CustomProtocol.Net
         }
         private void StartFragmentTimer(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
-            System.Timers.Timer timer = new Timers.Timer(2000);
+            System.Timers.Timer timer = new Timers.Timer(1000);
            
             timer.Elapsed += async delegate
             {

@@ -80,9 +80,9 @@ namespace CustomProtocol.Net
             
             if( _overrallMessagesCount[id] != -1)
             {
-                Console.WriteLine("----------");
-                Console.WriteLine(_fragmentedMessages[id].Count);
-                Console.WriteLine(_overrallMessagesCount[id]);
+              //  Console.WriteLine("----------");
+             //   Console.WriteLine(_fragmentedMessages[id].Count);
+             //   Console.WriteLine(_overrallMessagesCount[id]);
             }
             return (_overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count ) || (_overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count-1);
             

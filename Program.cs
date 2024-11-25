@@ -73,7 +73,7 @@ while(true)
         bool err = options.ContainsKey("-err");
 
         uint fragmentSize = options.ContainsKey("-fs") ? Convert.ToUInt32(options["-fs"]) : 10;
-        if(fragmentSize > 1463)
+        if(fragmentSize > 1449)
         {
             Console.WriteLine("Fragment size is too big");
             continue;
@@ -95,7 +95,7 @@ while(true)
             Console.WriteLine("File does not exist or you do not have right to access it");
             continue;
         }
-        if(fragmentSize > 1463)
+        if(fragmentSize > 1449)
         {
             Console.WriteLine("Fragment size is too big");
             continue;

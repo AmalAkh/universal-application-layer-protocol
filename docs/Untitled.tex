@@ -41,7 +41,7 @@ Sequence Number (2b) &
 ID (2b) & 
 Flags  (1b)& 
 Filename Offset (2b) &
-Data (0-1463b) &
+Data (0-1449b) &
 Checksum (2b)
 
 \\
@@ -88,6 +88,8 @@ Checksum (2b)
 \newline
 
 \textbf{Checksum} is a 2 byte fields containing CRC16 value to check the integrity of the message.
+
+
 
 \subsection{Sequence Number excess}
 In case more fragments will be needed than 65536 (max. values of 2 byte unsigned int) the following mechanism will be applied. After the fragment with sequence number 65535 is sent, sender will wait until all fragments will be acknowledged  to avoid possible collisions.Then it will reset sequence number to 0 and start sending new fragments. The receiver in case of excess of sequence number does not changes its behaviour as it saves every fragment with unique internal sequence number which reflects fragment position in the message, which prevents sequence numbers collisions.
@@ -176,7 +178,7 @@ Selective repeat was chosen as ARQ method.
 \end{figure}
 
 In the beginning, the sender sends several fragments (in this case 4, as window size is 4) without waiting for their acknowledgements, but starts timer for every fragment.  Receiver acknowledges every frame it gets. After receiving each fragment, it iterates from the current fragment sequence number minus 1 until it finds the delivered one, sending negative acknowledgements for every that was not delivered. Using this principle every fragment control previous fragments delivery    In the example shown in the Figure 3 fragment number 3 is not delivered or delivered with an error and that is why negative acknowledgement is sent. At the same time the acknowledgement for the second fragment is lost or not delivered  either.  PC1 resends fragment 3 as it received negative acknowledgement and also sends fragment 5  without waiting. After some period of time, PC1 resends fragment 2 as it didn't get acknowledgement in time.\newline
-In the implementation the initial window size is 10 fragments. It is relatively small, because it has a dynamic size. Sender in the implementation waits for 2 seconds before resending fragment \newline
+In the implementation the initial window size is 10 fragments. It is relatively small, because it has a dynamic size. Sender in the implementation waits for 1 second before resending fragment \newline
 To acknowledge delivery of a fragment a message sent containing flag Ack=1 and a sequence number of a fragment. To send a negative acknowledgement a message contains Syn=1 and a sequence number of a fragment. In both cases ID field is set to respective ID of the message.
 
 \subsection{Dynamic window}
@@ -217,6 +219,44 @@ Set path to save received files
 \begin{lstlisting}
 savepath path/to/your/file 
 \end{lstlisting}
+\newpage
+
+\section{Changes in comparison with the control point}
+Ping and pong requests were replaced with Keep Alive requests, respective flags were also renamed. 
+
+Sequence Number is reduced to 2 bytes.
+\newpage
+
+\section{Example of work}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{images/connect.png}
+    \caption{Connection (two green message and one after them are representing connection handshake)}
+    \label{fig:mesh1}
+\end{figure}
+
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{images/withoutfr.png}
+    \caption{Sending without fragmentation.Blue message is the acknowledgement and the other one is the message itself)}
+    \label{fig:mesh1}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{images/fr.png}
+    \caption{Sending file with fragmentation(blue message are acknowledgements, the rest are data message, fragment size is 128)}
+    \label{fig:mesh1}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{images/fin.png}
+    \caption{Disconnection}
+    \label{fig:mesh1}
+\end{figure}
 \newpage
 
 \section{Diagrams}
