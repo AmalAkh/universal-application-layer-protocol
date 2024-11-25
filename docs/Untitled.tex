@@ -123,7 +123,7 @@ Terminating connection is done by sending request with flag Finish=1. After this
     \caption{Scheme of Keep-Alive requests}
     \label{fig:mesh1}
 \end{figure}
-To keep the connection alive special message are used. Every 5 seconds each peer sends Keep-Alive request, that is a message with flag KeepAlive=1 . The other side has to respond with the same flag. After 3 consecutive unresponded "Keep-Alive" requests connection is considered to be lost and terminated. In case transmission is happening both a sender and a receiver half of a second check when the latest fragment was delivered (in case of a sender). If the latest fragment was delivered more than 3 seconds ago, three consecutive "Keep alive" requests are sent and if there is no response for at least one of them connection is considered to be lost.
+To keep the connection alive special message are used. Every 5 seconds each peer sends Keep-Alive request, that is a message with flag KeepAlive=1 . The other side has to respond with the the flag KeepAlive=1 and Ack=1. After 3 consecutive unresponded "Keep-Alive" requests connection is considered to be lost and terminated. In case transmission is happening both a sender and a receiver half of a second check when the latest fragment was delivered (in case of a sender latest acknowledgement). If the latest fragment/acknowledgement was delivered more than 5 seconds ago, three consecutive "Keep alive" requests are sent and if there is no response for at least one of them connection is considered to be lost.
 
 \newpage
 
@@ -176,13 +176,12 @@ Selective repeat was chosen as ARQ method.
 \end{figure}
 
 In the beginning, the sender sends several fragments (in this case 4, as window size is 4) without waiting for their acknowledgements, but starts timer for every fragment.  Receiver acknowledges every frame it gets. After receiving each fragment, it iterates from the current fragment sequence number minus 1 until it finds the delivered one, sending negative acknowledgements for every that was not delivered. Using this principle every fragment control previous fragments delivery    In the example shown in the Figure 3 fragment number 3 is not delivered or delivered with an error and that is why negative acknowledgement is sent. At the same time the acknowledgement for the second fragment is lost or not delivered  either.  PC1 resends fragment 3 as it received negative acknowledgement and also sends fragment 5  without waiting. After some period of time, PC1 resends fragment 2 as it didn't get acknowledgement in time.\newline
-In the implementation the initial window size is 10 fragments. It is relatively small, because it has a dynamic size. Sender in this implementation wait for 2,5 seconds before resending fragment checking if the fragment was acknowledged every 50 milliseconds.
-\newline
+In the implementation the initial window size is 10 fragments. It is relatively small, because it has a dynamic size. Sender in the implementation waits for 2 seconds before resending fragment \newline
 To acknowledge delivery of a fragment a message sent containing flag Ack=1 and a sequence number of a fragment. To send a negative acknowledgement a message contains Syn=1 and a sequence number of a fragment. In both cases ID field is set to respective ID of the message.
 
 \subsection{Dynamic window}
 As mentioned earlier, the window size is dynamic and depends on the throughput of the networks.\newline
-Size is corrected in the following way. When fragment acknowledgement is received by a sender,   the time it took to get this acknowledgement is compared to the threshold value (350 milliseconds in the implementation). If the time is bigger than threshold, it reduces the window size by half, if not increases by one. Only sender knows about the current window size as a receiver just acknowledges fragment or not. 
+Size is corrected in the following way. When fragment acknowledgement is received by a sender,   the time it took to get this acknowledgement is compared to the threshold value (200 milliseconds in the implementation). If the time is bigger than threshold, it reduces the window size by half, if not increases by one. Only sender knows about the current window size as a receiver just acknowledges fragment or not. 
 
 \pagebreak
 
@@ -224,7 +223,7 @@ savepath path/to/your/file
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{images/sendingp.png}
-    \caption{Sending fragments (for simplicity does not include window size updates)}
+    \caption{Sending fragments (for simplicity does not include window size updates and resending fragments, these operations are on separate diagrams)}
     \label{fig:mesh1}
 \end{figure}
 
@@ -248,6 +247,13 @@ savepath path/to/your/file
     \centering
     \includegraphics[width=0.75\textwidth]{images/trkeepalive.png}
     \caption{Keeping connection alive when transmitting}
+    \label{fig:mesh2}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/resend.png}
+    \caption{Resending fragments}
     \label{fig:mesh2}
 \end{figure}
 

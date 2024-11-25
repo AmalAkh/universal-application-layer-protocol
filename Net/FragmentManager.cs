@@ -77,23 +77,15 @@ namespace CustomProtocol.Net
         public bool CheckDeliveryCompletion(UInt16 id)
         {
             
-           // Console.WriteLine(_receivedSequenceNumbers[id].Count);
-          
-          /*  if(_overrallMessagesCount[id] != -1)
+            
+            if( _overrallMessagesCount[id] != -1)
             {
-                Console.WriteLine("");
-                Console.WriteLine("Missing:");
-                for(int i = 0; i < _overrallMessagesCount[id];i++)
-                {
-                   if(!_fragmentedMessages[id].Exists((msg)=>msg.SequenceNumber == i))
-                   {
-                    Console.Write($"#{i} ");
-                   }
-                }
-                Console.WriteLine("");
-
-            }*/
-            return _overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count;
+                Console.WriteLine("----------");
+                Console.WriteLine(_fragmentedMessages[id].Count);
+                Console.WriteLine(_overrallMessagesCount[id]);
+            }
+            return (_overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count ) || (_overrallMessagesCount[id] != -1 && _overrallMessagesCount[id] == _fragmentedMessages[id].Count-1);
+            
         }
         public bool CheckSequenceNumberExcess(UInt16 id)
         {
@@ -130,7 +122,7 @@ namespace CustomProtocol.Net
             }
             
             _undeliveredFragments[incomingMessage.Id].Remove(incomingMessage.SequenceNumber);
-        //    Console.WriteLine(incomingMessage.SequenceNumber-incomingMessage.WindowStart);
+        
             for(int i = incomingMessage.SequenceNumber-1; i >= 0 ;i++)
             {
               
@@ -160,6 +152,7 @@ namespace CustomProtocol.Net
             if(incomingMessage.Last)
             {
                 _overrallMessagesCount[incomingMessage.Id] = _portionsCounts[incomingMessage.Id]*(UInt16.MaxValue+1) +incomingMessage.SequenceNumber+1;
+               Console.WriteLine("Last frag");
                
             }
             return true;

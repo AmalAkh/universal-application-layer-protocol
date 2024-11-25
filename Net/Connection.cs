@@ -235,7 +235,7 @@ namespace CustomProtocol.Net
                         _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
                     }
                     _emergenecyCheckCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    Console.WriteLine("Interrupteddddd");
+                    
                     await InterruptConnection();
 
                     

@@ -176,8 +176,8 @@ namespace CustomProtocol.Net
                     if(_connection.IsTransmitting && _connection.Status == ConnectionStatus.Connected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 5)
                     {
 
-                        Console.WriteLine($"Checking connection...{DateTime.Now.Subtract(_lastMessageTime).Seconds}");
-                      //  await _connection.EmergencyCheck();
+                        Console.WriteLine($"Checking connection...");
+                        await _connection.EmergencyCheck();
 
                     }
                 
@@ -305,8 +305,10 @@ namespace CustomProtocol.Net
             for(int i = currentWindowStart; i <= currentWindowEnd && i < currentFragmentsPortion.Count; i++)
             {
 
-                
-                _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
+                if(_unAcknowledgedMessages.ContainsKey(id))
+                {
+                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[i].SequenceNumber);
+                }
              //  Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[i].SequenceNumber}");
                 
                 
@@ -326,7 +328,7 @@ namespace CustomProtocol.Net
                     await _connection.SendMessage(currentFragmentsPortion[i], err);
                 }
                 StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[i].SequenceNumber);
-
+            
                
                
                 
@@ -348,10 +350,11 @@ namespace CustomProtocol.Net
                 {
                     
                     
-                  //  Console.WriteLine(currentFragmentsPortion[previousWindowEnd].SequenceNumber-currentWindowStart);
-                    
-                    _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
-                    
+                  
+                    if(_unAcknowledgedMessages.ContainsKey(id))
+                    {
+                        _unAcknowledgedMessages[id].Add(currentFragmentsPortion[previousWindowEnd].SequenceNumber);
+                    }
                    
                     if(_connection.Status == ConnectionStatus.Unconnected)
                     {
@@ -360,7 +363,7 @@ namespace CustomProtocol.Net
                     if(err && seqNumForError == previousWindowEnd)
                     {
                        
-                      //  Console.WriteLine($"at least one {seqNumForError}");
+          
                         
                         await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
 
@@ -370,7 +373,7 @@ namespace CustomProtocol.Net
                     }
                     StartFragmentTimer(currentFragmentsPortion, id, currentFragmentsPortion[previousWindowEnd].SequenceNumber);
                     
-               //     Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
+                //    Console.WriteLine($"Sending fragment with sequence #{currentFragmentsPortion[previousWindowEnd].SequenceNumber}");
 
                 }
                     
@@ -446,11 +449,14 @@ namespace CustomProtocol.Net
         }
         private void StartFragmentTimer(List<CustomProtocolMessage> fragments,UInt16 id, UInt32 seqNum)
         {
-            System.Timers.Timer timer = new Timers.Timer(1000);
+            System.Timers.Timer timer = new Timers.Timer(2000);
            
             timer.Elapsed += async delegate
             {
-              
+                if(!_unAcknowledgedMessages.ContainsKey(id))
+                {
+                    return;
+                }
                 if(!_unAcknowledgedMessages[id].Contains(seqNum))
                 {
                     timer.Stop();
@@ -458,7 +464,7 @@ namespace CustomProtocol.Net
                 }
                 else
                 {
-                    Console.WriteLine("Resend");
+                   // Console.WriteLine("Resend");
                     await _connection.SendMessage(fragments[(int)seqNum]);
                    
                 }
