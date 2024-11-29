@@ -173,7 +173,7 @@ namespace CustomProtocol.Net
                     }
                    
                    
-                    if(_connection.IsTransmitting && _connection.Status == ConnectionStatus.Connected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 5)
+                    if(_connection.IsTransmitting && _connection.Status == ConnectionStatus.Connected && DateTime.Now.Subtract(_lastMessageTime).Seconds > 15)
                     {
 
                         Console.WriteLine($"Checking connection...");
