@@ -185,13 +185,17 @@ namespace CustomProtocol.Net
                 
             });
         }
-        
+        private int _latestMessageId = -1;
         private async Task HandleMessage(CustomProtocolMessage incomingMessage)
         {
+            if(_latestMessageId == incomingMessage.Id)
+            {
+                return;
+            }
             _lastMessageTime = DateTime.Now;
             _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             
-            // Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
+          //  Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
                 _connection.StartTransmission();
@@ -283,6 +287,7 @@ namespace CustomProtocol.Net
                 if(_connection.Status == ConnectionStatus.Connected)
                 {
                     Console.WriteLine("Message sent");
+                    _latestMessageId = id;
                 }
                 
                 _connection.StopTransmission();
@@ -370,7 +375,6 @@ namespace CustomProtocol.Net
                     {
                        
           
-                        
                         await _connection.SendMessageWithError(currentFragmentsPortion[previousWindowEnd]);
 
                     }else

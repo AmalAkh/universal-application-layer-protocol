@@ -265,14 +265,14 @@ namespace CustomProtocol.Net
                 byte[] bytes = message.ToByteArray();
                 if(err && Random.Shared.NextDouble() > 0.9999)
                 {
-                   // Console.WriteLine($"Error {message.SequenceNumber}");
+                    Console.WriteLine($"Error {message.SequenceNumber}");
                     bytes[Random.Shared.Next(7,bytes.Length)] = (byte)(Random.Shared.Next(0, 256));
                 }
                 await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
             }catch(SocketException e)
             {
-                Console.WriteLine($"Fatal error: {e.Message}");
-                InterruptConnection();
+             //   Console.WriteLine($"Fatal error: {e.Message}");
+              //  InterruptConnection();
             }
         }
         public async Task SendMessageWithError(CustomProtocolMessage message)
@@ -287,8 +287,8 @@ namespace CustomProtocol.Net
                 await _sendingSocket.SendToAsync(bytes, _currentEndPoint);
             }catch(SocketException e)
             {
-                Console.WriteLine($"Fatal error: {e.Message}");
-                InterruptConnection();
+               // Console.WriteLine($"Fatal error: {e.Message}");
+                //InterruptConnection();
             }
         }
         
