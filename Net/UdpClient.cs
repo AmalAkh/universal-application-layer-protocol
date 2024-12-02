@@ -195,7 +195,7 @@ namespace CustomProtocol.Net
             _lastMessageTime = DateTime.Now;
             _connection.SendFragmentAcknoledgement(incomingMessage.Id, incomingMessage.SequenceNumber);
             
-          //  Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
+            Console.WriteLine($"Incomming message #{incomingMessage.SequenceNumber}");
             if(_fragmentManager.IsFirstFragment(incomingMessage.Id))
             {
                 _connection.StartTransmission();
