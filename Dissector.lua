@@ -1,4 +1,4 @@
-myproto = Proto('custom-protocol', 'My custom protocol')
+myproto = Proto('universal-application-layer-protocol', 'Universal application layer protocol')
 
 -- Helper function for ProtoField names
 local function field(field_name)

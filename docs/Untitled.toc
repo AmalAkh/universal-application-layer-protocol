@@ -17,6 +17,5 @@
 \contentsline {section}{\numberline {8}Program interface}{11}{}%
 \contentsline {subsection}{\numberline {8.1}Compile and run}{11}{}%
 \contentsline {subsection}{\numberline {8.2}Usage}{11}{}%
-\contentsline {section}{\numberline {9}Changes in comparison with the control point}{12}{}%
-\contentsline {section}{\numberline {10}Example of work}{13}{}%
-\contentsline {section}{\numberline {11}Diagrams}{14}{}%
+\contentsline {section}{\numberline {9}Example of work}{12}{}%
+\contentsline {section}{\numberline {10}Diagrams}{13}{}%
