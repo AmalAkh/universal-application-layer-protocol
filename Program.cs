@@ -4,16 +4,6 @@ using System.Net;
 using System.Text;
 using System.Net.Sockets;
 
-Console.WriteLine("Write commands");
-
-
-
-
-
-
-
-
-
 
 CustomUdpClient udpClient = new CustomUdpClient ();
 Console.Write("Enter address for listening:");
