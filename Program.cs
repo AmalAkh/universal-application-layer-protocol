@@ -9,10 +9,7 @@ Console.WriteLine("Write commands");
 
 
 
-var msg = new CustomProtocolMessage();
-msg.FilenameOffset = 14;
-Console.WriteLine(msg.ToByteArray().Length);
-var msg2 = CustomProtocolMessage.FromBytes(msg.ToByteArray());
+
 
 
 
