@@ -1,6 +1,7 @@
 # Universal Application Layer Protocol
 
-[Full docs](docs/docs.pdf)
+Description of the protocol header and other details can be found here:
+[Docs](docs/docs.pdf)
 
 ## Installation
 
